@@ -25,6 +25,7 @@ void startup() {
     brightness_maxDT = 40;
     brightness_minNT = 39;
     brightness_minDT = 39;
+    FastLED.setMaxPowerInVoltsAndMilliamps(5, USB_POWER_MA); // gilt auch fuer Selbsttest und spaetere Helligkeitsaenderungen
   }
   if (SerialAvailable == false) {
     SerialDebug_enable = false;

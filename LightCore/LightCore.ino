@@ -19,6 +19,8 @@
 #include <Wire.h>
 
 #define VERSION "6.1" //Aktulle Version der Software
+#define MAX_POWER_MA 2000 // Stromgrenze der LEDs in mA (5 V): an das Netzteil anpassen
+#define USB_POWER_MA 400  // Stromgrenze, wenn beim Start ein PC angeschlossen ist (USB-Versorgung)
 
 DS3231 clock;
 RTCDateTime dt;
@@ -43,6 +45,7 @@ void setup() {
   clock.begin(); // einmalig: startet I2C (Wire.begin) und initialisiert das RTC
   Wire.setWireTimeout(25000, true); // I2C-Timeout 25 ms: ein haengender Bus friert die Uhr nicht mehr ein
   FastLED.addLeds<WS2812B, 3, GRB>(leds, nos);
+  FastLED.setMaxPowerInVoltsAndMilliamps(5, MAX_POWER_MA); // FastLED dimmt automatisch, bevor mehr Strom gezogen wird
   update_leds = true;
   lastTime = millis();
   randomSeed(analogRead(1));
