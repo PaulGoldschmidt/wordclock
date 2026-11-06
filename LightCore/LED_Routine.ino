@@ -13,6 +13,21 @@ void ColorCycle() {
   }
 }
 
+// Farben je Matrix-Zeile fuer den Farbmodus 3 (Zeile = LED-Nummer / 11)
+const byte ROW_COLORS[11][3] = {
+  {255, 0, 0},
+  {186, 69, 0},
+  {117, 138, 0},
+  {48, 207, 0},
+  {0, 234, 21},
+  {0, 165, 90},
+  {0, 96, 159},
+  {0, 27, 228},
+  {42, 0, 213},
+  {111, 0, 144},
+  {180, 0, 75}
+};
+
 void ColorLEDCycle(byte pos) { // pos = LED-Nummer, fuer den zeilenweisen Regenbogen (Modus 3)
   if (enableColorCycle == 2) {
     if (R > 0 && B == 0) {
@@ -54,61 +69,11 @@ void ColorLEDCycle(byte pos) { // pos = LED-Nummer, fuer den zeilenweisen Regenb
     }
   }
   
-  else if (enableColorCycle == 3) {
-    if (pos <= 10) {
-      R = 255;
-      G = 0;
-      B = 0;
-    }
-    else if (pos <= 21) {
-      R = 186;
-      G = 69;
-      B = 0;
-    }
-    else if (pos <= 32) {
-      R = 117;
-      G = 138;
-      B = 0;
-    }
-    else if (pos <= 43) {
-      R = 48;
-      G = 207;
-      B = 0;
-    }
-    else if (pos <= 54) {
-      R = 0;
-      G = 234;
-      B = 21;
-    }
-    else if (pos <= 65) {
-      R = 0;
-      G = 165;
-      B = 90;
-    }
-    else if (pos <= 76) {
-      R = 0;
-      G = 96;
-      B = 159;
-    }
-    else if (pos <= 87) {
-      R = 0;
-      G = 27;
-      B = 228;
-    }
-    else if (pos <= 98) {
-      R = 42;
-      G = 0;
-      B = 213;
-    }
-    else if (pos <= 109) {
-      R = 111;
-      G = 0;
-      B = 144;
-    }
-    else if (pos <= 120) {
-      R = 180;
-      G = 0;
-      B = 75;
+  else if (enableColorCycle == 3) { // Regenbogen von oben nach unten: eine Farbe pro Zeile (11 LEDs)
+    if (pos <= 120) {
+      R = ROW_COLORS[pos / 11][0];
+      G = ROW_COLORS[pos / 11][1];
+      B = ROW_COLORS[pos / 11][2];
     }
   }
 }
