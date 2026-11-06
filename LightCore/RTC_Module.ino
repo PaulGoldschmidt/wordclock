@@ -26,18 +26,16 @@ void RTCRead() {
 }
 
 boolean summertime_EU() {
-  if (enableTimechange == 1) {
-    byte tzHours = 1;
-    if (monat<3 || monat>10) return false; // keine Sommerzeit in Jan, Feb, Nov, Dez
-    if (monat>3 && monat<10) return true; // Sommerzeit in Apr, Mai, Jun, Jul, Aug, Sep
-    if (monat==3 && (stunde + 24 * datum)>=(1 + tzHours + 24*(31 - (5 * jahr /4 + 4) % 7)) || monat==10 && (stunde + 24 * datum)<(1 + tzHours + 24*(31 - (5 * jahr /4 + 1) % 7)))
-      return true;
-    else
-      return false;
+  if (enableTimechange != 1) {
+    return false; // Zeitumstellung aus (oder ungueltiger Wert im EEPROM)
   }
-  else if (enableTimechange == 0) {
-     return false;
-  }
+  byte tzHours = 1;
+  if (monat<3 || monat>10) return false; // keine Sommerzeit in Jan, Feb, Nov, Dez
+  if (monat>3 && monat<10) return true; // Sommerzeit in Apr, Mai, Jun, Jul, Aug, Sep
+  if ((monat==3 && (stunde + 24 * datum)>=(1 + tzHours + 24*(31 - (5 * jahr /4 + 4) % 7))) || (monat==10 && (stunde + 24 * datum)<(1 + tzHours + 24*(31 - (5 * jahr /4 + 1) % 7))))
+    return true;
+  else
+    return false;
 }
 
 bool RTC_Check() { // true = RTC liefert keine gueltige Zeit

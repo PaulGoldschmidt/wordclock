@@ -36,9 +36,10 @@ void SerialCommunication() {
       enableColorCycle = 3;
     }
     if (mode_read.charAt(1) == '/') {
-      EEPROM.write(15, 0); //Automatischer RGB-Farbwechsel aus!
-      enableColorCycle = 0;
-      analyzeAndSetRGB();
+      if (analyzeAndSetRGB()) { // nur bei gueltiger Farbe umschalten
+        EEPROM.write(15, 0); //Automatischer RGB-Farbwechsel aus!
+        enableColorCycle = 0;
+      }
     }
   }
   else if (mode_read.charAt(0) == '!') { // Brightness
@@ -72,10 +73,11 @@ void SerialCommunication() {
     EEPROM.write(23, 0);
   }
   else if (mode_read.charAt(0) == '?') {
-    byte Temp1;
-    Temp1 = (byte)mode_read[1] - 48;
-    EEPROM.write(24, Temp1); //LDR-Teiler neu beschreiben
-    LDRDivider = Temp1;
+    int divider = parseNumber(1, 1, 1, 9); // 0 waere eine Division durch 0 in LDR()
+    if (divider >= 0) {
+      EEPROM.write(24, divider); //LDR-Teiler neu beschreiben
+      LDRDivider = divider;
+    }
   }
   update_leds = true;
   Temp1 = EEPROM.read(17); //Anzahl der neubeschreibungen durch den PC zählen.
@@ -92,32 +94,44 @@ byte daysInMonth(byte m, int y) {
   return 31;
 }
 
+// Liest len Ziffern ab Position start aus mode_read. Liefert -1, wenn eine Stelle keine Ziffer ist
+// (auch wenn der Befehl zu kurz ist) oder der Wert ausserhalb von [minVal, maxVal] liegt.
+int parseNumber(byte start, byte len, int minVal, int maxVal) {
+  int value = 0;
+  for (byte k = start; k < start + len; k++) {
+    char c = mode_read[k]; // ausserhalb des Strings liefert String '\0'
+    if (!isDigit(c)) {
+      return -1;
+    }
+    value = value * 10 + (c - '0');
+  }
+  if (value < minVal || value > maxVal) {
+    return -1;
+  }
+  return value;
+}
+
+void invalidCommand() {
+  if (SerialDebug_enable == true) {Serial.println(F("Ungueltiger Befehl, ignoriert."));}
+}
+
 void analyzeAndSetTime(const String &inputWert) { // Referenz statt Kopie: spart RAM
-  byte Temp1, Temp2, Temp3;
-  Temp1 = (byte)mode_read[1] - 48;
-  Temp2 = (byte)mode_read[2] - 48;
-  jahr = Temp1 * 10 + Temp2 + 2000;
-  // now month
-  Temp1 = (byte)mode_read[3] - 48;
-  Temp2 = (byte)mode_read[4] - 48;
-  monat = Temp1 * 10 + Temp2;
-  // now date
-  Temp1 = (byte)mode_read[5] - 48;
-  Temp2 = (byte)mode_read[6] - 48;
-  datum = Temp1 * 10 + Temp2;
-  // now Hour
-  Temp1 = (byte)mode_read[7] - 48;
-  Temp2 = (byte)mode_read[8] - 48;
-  stunde = Temp1 * 10 + Temp2;
-  // now Minute
-  Temp1 = (byte)mode_read[9] - 48;
-  Temp2 = (byte)mode_read[10] - 48;
-  minute = Temp1 * 10 + Temp2;
-  // now Second
-  Temp1 = (byte)mode_read[11] - 48;
-  Temp2 = (byte)mode_read[12] - 48;
-  Temp3 = Temp1 * 10 + Temp2;
-  sekunde = Temp3 + 5; // Ausgleich fuer die Dauer von Uebertragung und Serial-Timeout
+  int y = parseNumber(1, 2, 0, 99);
+  int mo = parseNumber(3, 2, 1, 12);
+  int d = parseNumber(5, 2, 1, 31);
+  int h = parseNumber(7, 2, 0, 23);
+  int mi = parseNumber(9, 2, 0, 59);
+  int s = parseNumber(11, 2, 0, 59);
+  if (y < 0 || mo < 0 || d < 0 || h < 0 || mi < 0 || s < 0 || d > daysInMonth(mo, y + 2000)) {
+    invalidCommand(); // keine ungueltige Zeit ins RTC schreiben
+    return;
+  }
+  jahr = y + 2000;
+  monat = mo;
+  datum = d;
+  stunde = h;
+  minute = mi;
+  sekunde = s + 5; // Ausgleich fuer die Dauer von Uebertragung und Serial-Timeout
   if (sekunde >= 60) { // Uebertrag bis ins Jahr, sonst landet z.B. "23:60" im RTC
     sekunde = sekunde - 60;
     if (++minute >= 60) {
@@ -143,34 +157,22 @@ void analyzeAndSetTime(const String &inputWert) { // Referenz statt Kopie: spart
 }
 
 void analyzeAndSetBrightness() {
-  byte Temp1, Temp2, Temp3;
-  Temp1 = (byte)mode_read[1] - 48;
-  Temp2 = (byte)mode_read[2] - 48;
-  Temp3 = (byte)mode_read[3] - 48;
-  brightness_minDT = Temp1 * 100 + Temp2 * 10 + Temp3;
-
-  Temp1 = (byte)mode_read[4] - 48;
-  Temp2 = (byte)mode_read[5] - 48;
-  Temp3 = (byte)mode_read[6] - 48;
-  brightness_maxDT = Temp1 * 100 + Temp2 * 10 + Temp3;
-
-  Temp1 = (byte)mode_read[7] - 48;
-  Temp2 = (byte)mode_read[8] - 48;
-  Temp3 = (byte)mode_read[9] - 48;
-  brightness_minNT = Temp1 * 100 + Temp2 * 10 + Temp3;
-
-  Temp1 = (byte)mode_read[10] - 48;
-  Temp2 = (byte)mode_read[11] - 48;
-  Temp3 = (byte)mode_read[12] - 48;
-  brightness_maxNT = Temp1 * 100 + Temp2 * 10 + Temp3;
-
-  Temp1 = (byte)mode_read[13] - 48;
-  Temp2 = (byte)mode_read[14] - 48;
-  NTbeginH = Temp1 * 10 + Temp2;
-
-  Temp1 = (byte)mode_read[15] - 48;
-  Temp2 = (byte)mode_read[16] - 48;
-  NTendH = Temp1 * 10 + Temp2;
+  int minDT = parseNumber(1, 3, 0, 255);
+  int maxDT = parseNumber(4, 3, 0, 255);
+  int minNT = parseNumber(7, 3, 0, 255);
+  int maxNT = parseNumber(10, 3, 0, 255);
+  int beginH = parseNumber(13, 2, 0, 23);
+  int endH = parseNumber(15, 2, 0, 23);
+  if (minDT < 0 || maxDT < 0 || minNT < 0 || maxNT < 0 || beginH < 0 || endH < 0) {
+    invalidCommand();
+    return;
+  }
+  brightness_minDT = minDT;
+  brightness_maxDT = maxDT;
+  brightness_minNT = minNT;
+  brightness_maxNT = maxNT;
+  NTbeginH = beginH;
+  NTendH = endH;
   EEPROM.write(0, brightness_maxDT);
   EEPROM.write(1, brightness_minDT);
   EEPROM.write(19, brightness_maxNT);
@@ -179,27 +181,30 @@ void analyzeAndSetBrightness() {
   EEPROM.write(22, NTendH);
 }
 
-void analyzeAndSetRGB() {
-  byte Temp1, Temp2, Temp3;
-  Temp1 = (byte)mode_read[2] - 48;
-  Temp2 = (byte)mode_read[3] - 48;
-  Temp3 = (byte)mode_read[4] - 48;
-  R = Temp1 * 100 + Temp2 * 10 + Temp3;
-  Temp1 = (byte)mode_read[5] - 48;
-  Temp2 = (byte)mode_read[6] - 48;
-  Temp3 = (byte)mode_read[7] - 48;
-  G = Temp1 * 100 + Temp2 * 10 + Temp3;
-  Temp1 = (byte)mode_read[8] - 48;
-  Temp2 = (byte)mode_read[9] - 48;
-  Temp3 = (byte)mode_read[10] - 48;
-  B = Temp1 * 100 + Temp2 * 10 + Temp3;
+boolean analyzeAndSetRGB() { // '#/RRRGGGBBB', liefert false bei ungueltiger Farbe
+  int r = parseNumber(2, 3, 0, 255);
+  int g = parseNumber(5, 3, 0, 255);
+  int b = parseNumber(8, 3, 0, 255);
+  if (r < 0 || g < 0 || b < 0) {
+    invalidCommand();
+    return false;
+  }
+  R = r;
+  G = g;
+  B = b;
   EEPROM.write(2, R);
   EEPROM.write(3, G);
   EEPROM.write(4, B);
+  return true;
 }
 
 void analyzeAndSetTimechange() {
-  enableTimechange = (byte)mode_read[1] - 48;
+  int value = parseNumber(1, 1, 0, 1);
+  if (value < 0) {
+    invalidCommand();
+    return;
+  }
+  enableTimechange = value;
   EEPROM.write(5, enableTimechange);
 }
 

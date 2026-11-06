@@ -103,6 +103,9 @@ void EEPROM_Read() {
     NTbeginH = EEPROM.read(21);
     NTendH = EEPROM.read(22);
     LDRDivider = EEPROM.read(24);
+    if (LDRDivider == 0) {
+      LDRDivider = 3; // 0 (z.B. von einem alten "?0"-Befehl) waere eine Division durch 0 in LDR()
+    }
     if (SerialDebug_enable == true) {
       Serial.println(F("EEPROM ausgelesen."));
       Serial.print(F("Nummer: "));
