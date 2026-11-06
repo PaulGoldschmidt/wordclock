@@ -13,7 +13,7 @@ void ColorCycle() {
   }
 }
 
-void ColorLEDCycle() {
+void ColorLEDCycle(byte pos) { // pos = LED-Nummer, fuer den zeilenweisen Regenbogen (Modus 3)
   if (enableColorCycle == 2) {
     if (R > 0 && B == 0) {
       R = R - 64;
@@ -55,57 +55,57 @@ void ColorLEDCycle() {
   }
   
   else if (enableColorCycle == 3) {
-    if (i <= 10) {
+    if (pos <= 10) {
       R = 255;
       G = 0;
       B = 0;
     }
-    else if (i <= 21) {
+    else if (pos <= 21) {
       R = 186;
       G = 69;
       B = 0;
     }
-    else if (i <= 32) {
+    else if (pos <= 32) {
       R = 117;
       G = 138;
       B = 0;
     }
-    else if (i <= 43) {
+    else if (pos <= 43) {
       R = 48;
       G = 207;
       B = 0;
     }
-    else if (i <= 54) {
+    else if (pos <= 54) {
       R = 0;
       G = 234;
       B = 21;
     }
-    else if (i <= 65) {
+    else if (pos <= 65) {
       R = 0;
       G = 165;
       B = 90;
     }
-    else if (i <= 76) {
+    else if (pos <= 76) {
       R = 0;
       G = 96;
       B = 159;
     }
-    else if (i <= 87) {
+    else if (pos <= 87) {
       R = 0;
       G = 27;
       B = 228;
     }
-    else if (i <= 98) {
+    else if (pos <= 98) {
       R = 42;
       G = 0;
       B = 213;
     }
-    else if (i <= 109) {
+    else if (pos <= 109) {
       R = 111;
       G = 0;
       B = 144;
     }
-    else if (i <= 120) {
+    else if (pos <= 120) {
       R = 180;
       G = 0;
       B = 75;
@@ -163,44 +163,11 @@ void LED_Routine() {
     }
 
     // Stunden
-    if ((cStunde == 1 && cMinute <= 4) || (cStunde == 13 && cMinute <= 4)) {
-      EIN();
+    if (cStunde % 12 == 1 && cMinute == 0) {
+      EIN(); // "ES IST EIN UHR"
     }
-    else if (cStunde == 1 || cStunde == 13) {
-      EINS();
-    }
-    else if (cStunde == 2 || cStunde == 14) {
-      ZWEI();
-    }
-    else if (cStunde == 3 || cStunde == 15) {
-      DREI();
-    }
-    else if (cStunde == 4 || cStunde == 16) {
-      VIER();
-    }
-    else if (cStunde == 5 || cStunde == 17) {
-      SFUENF();
-    }
-    else if (cStunde == 6 || cStunde == 18) {
-      SECHS();
-    }
-    else if (cStunde == 7 || cStunde == 19) {
-      SIEBEN();
-    }
-    else if (cStunde == 8 || cStunde == 20) {
-      ACHT();
-    }
-    else if (cStunde == 9 || cStunde == 21) {
-      NEUN();
-    }
-    else if (cStunde == 10 || cStunde == 22) {
-      SZEHN();
-    }
-    else if (cStunde == 11 || cStunde == 23) {
-      ELF();
-    }
-    else if (cStunde == 0 || cStunde == 12 || cStunde == 24) {
-      ZWOELF();
+    else {
+      HOUR(cStunde); // 0/12/24 -> ZWOELF, 1/13 -> EINS, ...
     }
     if (cMinute == 0) {
       UHR();

@@ -1,165 +1,60 @@
-void ESIST() {
-  i = 1;
-  if (enableColorCycle == 3){ColorLEDCycle();}
-  leds[0].setRGB(R, G, B);  //E
-  ColorLEDCycle();
-  leds[1].setRGB(R, G, B);  //S
-  ColorLEDCycle();
-  leds[3].setRGB(R, G, B);  //I
-  ColorLEDCycle();
-  leds[4].setRGB(R, G, B);  //S
-  ColorLEDCycle();
-  leds[5].setRGB(R, G, B); //T
-}
-
-void FUENF() {
-  for (i = 7; i <= 10; i++) {
-    ColorLEDCycle();
-    leds[i].setRGB(R, G, B);
+// Ein Wort = zusammenhaengender LED-Bereich. Die Zeilen sind abwechselnd verdrahtet (Serpentine):
+// bei from > to laeuft das Wort rueckwaerts. Die Reihenfolge ist wichtig fuer den Farbverlauf (Modus 2).
+void lightWord(byte from, byte to) {
+  byte k = from;
+  while (true) {
+    ColorLEDCycle(k);
+    leds[k].setRGB(R, G, B);
+    if (k == to) {
+      break;
+    }
+    if (from < to) {
+      k++;
+    }
+    else {
+      k--;
+    }
   }
 }
 
-void ZEHN() {
-  for (i = 14; i >= 11; i--) {
-    ColorLEDCycle();
-    leds[i].setRGB(R, G, B);
+void ESIST() { // "ES IST": der erste Buchstabe bekommt im Modus 2 noch keinen Farbschritt
+  const byte letters[] = {0, 1, 3, 4, 5};
+  for (byte k = 0; k < 5; k++) {
+    if (k > 0 || enableColorCycle == 3) {
+      ColorLEDCycle(letters[k]);
+    }
+    leds[letters[k]].setRGB(R, G, B);
   }
 }
 
+void FUENF()   { lightWord(7, 10); }
+void ZEHN()    { lightWord(14, 11); }
+void ZWANZIG() { lightWord(21, 15); }
+void VIERTEL() { lightWord(25, 31); }
+void NACH()    { lightWord(36, 33); }
+void VOR()     { lightWord(39, 37); }
+void HALB()    { lightWord(44, 47); }
+void UHR()     { lightWord(118, 120); }
+void EIN()     { lightWord(86, 84); } // "EIN" (fuer "ES IST EIN UHR"), EINS ohne S
 
-void ZWANZIG() {
-  for (i = 21; i >= 15; i--) {
-    ColorLEDCycle();
-    leds[i].setRGB(R, G, B);
-  }
-}
+// Stundenwoerter {erste LED, letzte LED}, Index = Stunde % 12
+const byte HOUR_WORDS[12][2] = {
+  {66, 70},   // ZWOELF
+  {86, 83},   // EINS
+  {109, 106}, // ZWEI
+  {64, 61},   // DREI
+  {73, 76},   // VIER
+  {51, 54},   // FUENF
+  {94, 98},   // SECHS
+  {111, 116}, // SIEBEN
+  {58, 55},   // ACHT
+  {88, 91},   // NEUN
+  {104, 101}, // ZEHN
+  {79, 77}    // ELF
+};
 
-void VIERTEL () {
-  for (i = 25; i <= 31; i++) {
-    ColorLEDCycle();
-    leds[i].setRGB(R, G, B);
-  }
-}
-
-void NACH() {
-  for (i = 36; i >= 33; i--) {
-    ColorLEDCycle();
-    leds[i].setRGB(R, G, B);
-  }
-}
-
-void VOR() {
-  for (i = 39; i >= 37; i--) {
-    ColorLEDCycle();
-    leds[i].setRGB(R, G, B);
-  }
-}
-
-
-void HALB() {
-  for (i = 44; i <= 47; i++) {
-    ColorLEDCycle();
-    leds[i].setRGB(R, G, B);
-  }
-}
-
-void ZWOELF() {
-  for (i = 66; i <= 70; i++) {
-    ColorLEDCycle();
-    leds[i].setRGB(R, G, B);
-  }
-}
-
-void ZWEI() {
-  for (i = 109; i >= 106; i--) {
-    ColorLEDCycle();
-    leds[i].setRGB(R, G, B);
-  }
-}
-
-void EIN() {
-  for (i = 86; i >= 84; i--) {
-    ColorLEDCycle();
-    leds[i].setRGB(R, G, B);
-  }
-}
-
-void EINS() {
-  for (i = 86; i >= 83; i--) {
-    ColorLEDCycle();
-    leds[i].setRGB(R, G, B);
-  }
-}
-
-void SIEBEN() {
-  for (i = 111; i <= 116; i++) {
-    ColorLEDCycle();
-    leds[i].setRGB(R, G, B);
-  }
-}
-
-void DREI() {
-  for (i = 64; i >= 61; i--) {
-    ColorLEDCycle();
-    leds[i].setRGB(R, G, B);
-  }
-}
-
-void SFUENF() {
-  for (i = 51; i <= 54; i++) {
-    ColorLEDCycle();
-    leds[i].setRGB(R, G, B);
-  }
-}
-
-void ELF() {
-  for (i = 79; i >= 77; i--) {
-    ColorLEDCycle();
-    leds[i].setRGB(R, G, B);
-  }
-}
-
-void NEUN() {
-  for (i = 88; i <= 91; i++) {
-    ColorLEDCycle();
-    leds[i].setRGB(R, G, B);
-  }
-}
-
-void VIER() {
-  for (i = 73; i <= 76; i++) {
-    ColorLEDCycle();
-    leds[i].setRGB(R, G, B);
-  }
-}
-
-void ACHT() {
-  for (i = 58; i >= 55; i--) {
-    ColorLEDCycle();
-    leds[i].setRGB(R, G, B);
-  }
-}
-
-void SZEHN() {
-  for (i = 104; i >= 101; i--) {
-    ColorLEDCycle();
-    leds[i].setRGB(R, G, B);
-  }
-}
-
-void SECHS() {
-  for (i = 94; i <= 98; i++) {
-    ColorLEDCycle();
-    leds[i].setRGB(R, G, B);
-  }
-
-}
-
-void UHR() {
-  for (i = 118; i <= 120; i++) {
-    ColorLEDCycle();
-    leds[i].setRGB(R, G, B);
-  }
+void HOUR(byte h) {
+  lightWord(HOUR_WORDS[h % 12][0], HOUR_WORDS[h % 12][1]);
 }
 
 void RAND1() {

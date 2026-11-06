@@ -54,7 +54,7 @@ RTCDateTime dt;
 //debug-modus ein/aus
 boolean SerialDebug_enable = true;
 
-byte red, green, blue, sekunde, minute, stunde, datum, dow, monat, lastminute, brightness, brightness_maxNT, brightness_maxDT, brightness_minNT, brightness_minDT, NTbeginH, NTendH, enableTimechange, enableColorCycle, LDRDivider, i, InitalsetupDone;
+byte red, green, blue, sekunde, minute, stunde, datum, dow, monat, lastminute, brightness, brightness_maxNT, brightness_maxDT, brightness_minNT, brightness_minDT, NTbeginH, NTendH, enableTimechange, enableColorCycle, LDRDivider, InitalsetupDone;
 int jahr, startups, runtime, R, G, B; 
 uint32_t lastTime; // uint32_t wie millis() auf AVR: die Differenz millis() - lastTime ist damit ueberlaufsicher
 boolean update_leds = false, lupdate_leds = false, rtcError = false;
