@@ -4,7 +4,6 @@ bool PM;
 DS3231 Clock;
 
 void RTCRead() {
-  clock.begin();
   dt = clock.getDateTime();
   
   jahr = dt.year;
@@ -23,8 +22,6 @@ void RTCRead() {
     rtcError = false;
     update_leds = true; // Uhrzeit nach der Fehleranzeige sofort neu zeichnen
   }
-  delay(250);
-  Wire.endTransmission();
   if (summertime_EU() == true) {stunde = stunde + 1;} // Prüft ob Summerzeit ist
 }
 

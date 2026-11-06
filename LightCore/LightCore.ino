@@ -40,6 +40,7 @@ void setup() {
   Serial.begin(115200);
   delay(250);
   Serial.println(F("--Lichtbild Startvorgang--"));
+  clock.begin(); // einmalig: startet I2C (Wire.begin) und initialisiert das RTC
   Wire.setWireTimeout(25000, true); // I2C-Timeout 25 ms: ein haengender Bus friert die Uhr nicht mehr ein
   FastLED.addLeds<WS2812B, 3, GRB>(leds, nos);
   update_leds = true;

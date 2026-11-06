@@ -112,7 +112,6 @@ void analyzeAndSetTime(const String &inputWert) { // Referenz statt Kopie: spart
     sekunde = sekunde - 60;
     minute++;
   }
-  clock.begin();
   delay(100);
   Serial.println(mode_read);
   clock.setDateTime(jahr, monat, datum, stunde, minute, sekunde);
