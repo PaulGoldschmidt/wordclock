@@ -133,23 +133,14 @@ void EEPROM_Read() {
   else {
     while (InitalsetupDone != 1) { //debug am Anfang zum Checken ob alle LEDs funktionieren
       Serial.println(F("Hello World - this is LightPicture NG. Testing LEDs..."));
-      FastLED.setBrightness(20);
-      fill_solid(leds, nos, CRGB::Red);
-      FastLED.show();
-      delay(1000);
-      CheckForSerial();
-      fill_solid(leds, nos, CRGB::Green);
-      FastLED.show();
-      delay(1000);
-      CheckForSerial();
-      fill_solid(leds, nos, CRGB::Blue);
-      FastLED.show();
-      delay(1000);
-      CheckForSerial();
-      fill_solid(leds, nos, CRGB::White);
-      FastLED.show();
-      delay(1000);
-      CheckForSerial();
+      const CRGB testColors[] = {CRGB::Red, CRGB::Green, CRGB::Blue, CRGB::White};
+      for (byte c = 0; c < 4; c++) {
+        FastLED.setBrightness(20); // bei jeder Farbe neu: ein serieller Befehl setzt die Helligkeit auf 255
+        fill_solid(leds, nos, testColors[c]);
+        FastLED.show();
+        delay(1000);
+        CheckForSerial();
+      }
       InitalsetupDone = EEPROM.read(23);
       FastLED.clear();
       FastLED.setBrightness(255);
