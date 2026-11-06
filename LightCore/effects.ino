@@ -133,7 +133,7 @@ void WordClock_color() {
   FastLED.show();
 }
 
-void SerialLEDInfomation() { // die Uhr ist im Seriellen Empfangsmodus.
+void SerialLEDInformation() { // die Uhr ist im Seriellen Empfangsmodus.
   FastLED.clear();
   FastLED.setBrightness(255);
   red = 0;

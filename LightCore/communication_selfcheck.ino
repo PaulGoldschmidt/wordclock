@@ -1,6 +1,6 @@
 void SerialCommunication() {
   byte Temp1, Temp2;
-  SerialLEDInfomation();
+  SerialLEDInformation();
   Serial.setTimeout(2500);
   mode_read = Serial.readString();
   if (mode_read.charAt(0) == '@') {
