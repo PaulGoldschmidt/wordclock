@@ -1,7 +1,6 @@
 int sensorValue, maxBrightnessCalc, minBrightnessCalc, lsensorValue;
 byte applied_value;
 byte value_now;
-void WordClock();
 
 boolean isNight() { // Nachtzeitraum ueber Mitternacht (z.B. 23 -> 6) oder innerhalb eines Tages (z.B. 0 -> 7)
   if (NTbeginH > NTendH) {
@@ -119,11 +118,10 @@ void writeDefaultSettings() { // Werkseinstellungen, gemeinsam fuer Ersteinricht
 
 void EEPROM_Read() {
   int newStartups;
-  byte kdnnr, dayOfAuslieferung;
+  byte kdnnr;
   InitalsetupDone = EEPROM.read(EE_INIT_DONE);
   if (InitalsetupDone == 1) {
     kdnnr = EEPROM.read(EE_CLOCK_NUMBER);
-    dayOfAuslieferung =  EEPROM.read(EE_DELIVERY_DAY);
     loadSettings();
     startups = eepromReadInt(EE_STARTUPS); // lese die anzahl der Startups im EEPROM aus (Speicherzelle 6+7)
     newStartups = startups + 1;

@@ -1,8 +1,3 @@
-bool Century=false;
-bool h12;
-bool PM;
-DS3231 Clock;
-
 void RTCRead() {
   dt = clock.getDateTime();
   

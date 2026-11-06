@@ -4,7 +4,7 @@ void SerialCommunication() {
   Serial.setTimeout(2500);
   mode_read = Serial.readString();
   if (mode_read.charAt(0) == '@') {
-    analyzeAndSetTime(mode_read);
+    analyzeAndSetTime();
   }
   else if (mode_read.charAt(0) == '#') { // Hex Color
     red = 255;
@@ -115,7 +115,7 @@ void invalidCommand() {
   if (SerialDebug_enable == true) {Serial.println(F("Ungueltiger Befehl, ignoriert."));}
 }
 
-void analyzeAndSetTime(const String &inputWert) { // Referenz statt Kopie: spart RAM
+void analyzeAndSetTime() { // "@YYMMDDhhmmss" aus mode_read
   int y = parseNumber(1, 2, 0, 99);
   int mo = parseNumber(3, 2, 1, 12);
   int d = parseNumber(5, 2, 1, 31);
@@ -238,7 +238,6 @@ void checkIfNight() {
 }
 
 void CheckForSerial() {
-  int timer = 0;
   if (SerialDebug_enable == true) {Serial.println(F("Warte auf neue Befehle..."));}
   if (Serial.available() >= 13) {
     SerialCommunication();

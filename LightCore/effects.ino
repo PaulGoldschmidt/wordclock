@@ -1,10 +1,5 @@
 int timer;
 uint8_t gHue = 0; // rotating "base color" used by many of the patterns
-void confetti();
-void WordClock();
-//void startup();
-void confetti();
-void WordClock();
 
 void confetti()
 {
