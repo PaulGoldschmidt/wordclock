@@ -238,7 +238,7 @@ void selfcheck() {
     Serial.println(F("PROBLEM"));
   }
   RTCRead();
-  if (jahr <= 2015) {
+  if (rtcError || jahr <= 2015) {
     Serial.println(F("RTCNOTSET"));
   }
   else {
