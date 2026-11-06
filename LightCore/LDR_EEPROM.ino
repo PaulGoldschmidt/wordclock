@@ -18,7 +18,7 @@ void LDR() {
   if (isNight()) { //helligkeit nachts
     maxBrightnessCalc = brightness_maxNT;
     minBrightnessCalc = brightness_minNT;
-    Serial.println(F("Es ist Nacht!"));
+    if (SerialDebug_enable == true) {Serial.println(F("Es ist Nacht!"));}
   }
   else {
     maxBrightnessCalc = brightness_maxDT;
@@ -60,7 +60,7 @@ void applyBrightness() {
       FastLED.setBrightness(value_now);
       FastLED.show();
       delay(20);
-      Serial.println(value_now);
+      if (SerialDebug_enable == true) {Serial.println(value_now);}
     }
   }
 }
