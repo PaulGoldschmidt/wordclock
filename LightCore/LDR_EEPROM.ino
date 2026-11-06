@@ -11,7 +11,11 @@ boolean isNight() { // Nachtzeitraum ueber Mitternacht (z.B. 23 -> 6) oder inner
 }
 
 void LDR() {
-  sensorValue = analogRead(A0) / LDRDivider;
+  unsigned int sum = 0; // Mittelwert aus 8 Messungen (~1 ms) gegen Rauschen/Flackern; 8 * 1023 passt in int
+  for (byte k = 0; k < 8; k++) {
+    sum += analogRead(A0);
+  }
+  sensorValue = (sum / 8) / LDRDivider;
   if (sensorValue > 255) {
     sensorValue = 255; //wenn die Helligkeit im Raum über 255 ist, dann auf 255 setzten.
   }
