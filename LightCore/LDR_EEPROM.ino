@@ -81,50 +81,50 @@ int eepromReadInt(int adr) {
 }
 
 void loadSettings() { // Einstellungen aus dem EEPROM in den RAM uebernehmen
-  brightness_maxDT = EEPROM.read(0);
-  brightness_minDT = EEPROM.read(1);
-  R = EEPROM.read(2);
-  G = EEPROM.read(3);
-  B = EEPROM.read(4);
-  enableTimechange = EEPROM.read(5);
-  enableColorCycle = EEPROM.read(15);
-  brightness_maxNT = EEPROM.read(19);
-  brightness_minNT = EEPROM.read(20);
-  NTbeginH = EEPROM.read(21);
-  NTendH = EEPROM.read(22);
-  LDRDivider = EEPROM.read(24);
+  brightness_maxDT = EEPROM.read(EE_MAX_DAY);
+  brightness_minDT = EEPROM.read(EE_MIN_DAY);
+  R = EEPROM.read(EE_RED);
+  G = EEPROM.read(EE_GREEN);
+  B = EEPROM.read(EE_BLUE);
+  enableTimechange = EEPROM.read(EE_TIMECHANGE);
+  enableColorCycle = EEPROM.read(EE_COLOR_MODE);
+  brightness_maxNT = EEPROM.read(EE_MAX_NIGHT);
+  brightness_minNT = EEPROM.read(EE_MIN_NIGHT);
+  NTbeginH = EEPROM.read(EE_NIGHT_BEGIN);
+  NTendH = EEPROM.read(EE_NIGHT_END);
+  LDRDivider = EEPROM.read(EE_LDR_DIVIDER);
   if (LDRDivider == 0) {
     LDRDivider = 3; // 0 (z.B. von einem alten "?0"-Befehl) waere eine Division durch 0 in LDR()
   }
 }
 
 void writeDefaultSettings() { // Werkseinstellungen, gemeinsam fuer Ersteinrichtung und Reset ('*')
-  EEPROM.update(0, 255); //Maximale Helligkeit Tagsüber mit der neuen PCB-Version
-  EEPROM.update(1, 35); //Minimale Helligkeit Tagsüber
-  EEPROM.update(2, 0); // R
-  EEPROM.update(3, 204); // G
-  EEPROM.update(4, 255); // B
-  EEPROM.update(5, 1); //timechange enabled
-  EEPROM.update(15, 0); // RGB-Cycle deaktiveren.
-  EEPROM.update(19, 60); // Maximale Helligkeit Nachts
-  EEPROM.update(20, 7); // Minimale Helligkeit Nachts
-  EEPROM.update(21, 23); // Nachtanfang in Stunden
-  EEPROM.update(22, 6); // Nachtende in Stunden
-  EEPROM.update(24, 3); // LDR-Divider auf 3 setzen.
+  EEPROM.update(EE_MAX_DAY, 255); //Maximale Helligkeit Tagsüber mit der neuen PCB-Version
+  EEPROM.update(EE_MIN_DAY, 35); //Minimale Helligkeit Tagsüber
+  EEPROM.update(EE_RED, 0); // R
+  EEPROM.update(EE_GREEN, 204); // G
+  EEPROM.update(EE_BLUE, 255); // B
+  EEPROM.update(EE_TIMECHANGE, 1); //timechange enabled
+  EEPROM.update(EE_COLOR_MODE, 0); // RGB-Cycle deaktiveren.
+  EEPROM.update(EE_MAX_NIGHT, 60); // Maximale Helligkeit Nachts
+  EEPROM.update(EE_MIN_NIGHT, 7); // Minimale Helligkeit Nachts
+  EEPROM.update(EE_NIGHT_BEGIN, 23); // Nachtanfang in Stunden
+  EEPROM.update(EE_NIGHT_END, 6); // Nachtende in Stunden
+  EEPROM.update(EE_LDR_DIVIDER, 3); // LDR-Divider auf 3 setzen.
 }
 
 void EEPROM_Read() {
   int newStartups;
   byte kdnnr, dayOfAuslieferung;
-  InitalsetupDone = EEPROM.read(23);
+  InitalsetupDone = EEPROM.read(EE_INIT_DONE);
   if (InitalsetupDone == 1) {
-    kdnnr = EEPROM.read(14);
-    dayOfAuslieferung =  EEPROM.read(13);
+    kdnnr = EEPROM.read(EE_CLOCK_NUMBER);
+    dayOfAuslieferung =  EEPROM.read(EE_DELIVERY_DAY);
     loadSettings();
-    startups = eepromReadInt(6); // lese die anzahl der Startups im EEPROM aus (Speicherzelle 6+7)
+    startups = eepromReadInt(EE_STARTUPS); // lese die anzahl der Startups im EEPROM aus (Speicherzelle 6+7)
     newStartups = startups + 1;
-    eepromWriteInt(6, newStartups);
-    runtime = eepromReadInt(8);
+    eepromWriteInt(EE_STARTUPS, newStartups);
+    runtime = eepromReadInt(EE_RUNTIME);
     if (SerialDebug_enable == true) {
       Serial.println(F("EEPROM ausgelesen."));
       Serial.print(F("Nummer: "));
@@ -160,7 +160,7 @@ void EEPROM_Read() {
         delay(1000);
         CheckForSerial();
       }
-      InitalsetupDone = EEPROM.read(23);
+      InitalsetupDone = EEPROM.read(EE_INIT_DONE);
       FastLED.clear();
       FastLED.setBrightness(255);
       WordClock();
@@ -178,16 +178,16 @@ void EEPROM_Initialsetup() {
   byte clocknum = random(1, 255);
   WordClock_color();
   writeDefaultSettings();
-  eepromWriteInt(6, 0); //startups = 0
-  eepromWriteInt(8, 0); //runtime = 0
-  eepromWriteInt(10, jahr); //Jahr der Auslieferung der Uhr
-  EEPROM.update(12, monat); //Monat der Auslieferung
-  EEPROM.update(13, datum); //Tag der auslieferung
-  EEPROM.update(14, clocknum); //nummer der Uhr
-  EEPROM.update(16, 0); // Anzahl der Failures durch RTC auf 0.
-  EEPROM.update(17, 0); // Anzahl der neubeschreibungen von einem PC auf 0.
-  EEPROM.update(18, 0); // Anzahl der resets auf 0.
-  EEPROM.update(23, 1); // init auf 1 (zuletzt, damit eine unterbrochene Einrichtung wiederholt wird)
+  eepromWriteInt(EE_STARTUPS, 0); //startups = 0
+  eepromWriteInt(EE_RUNTIME, 0); //runtime = 0
+  eepromWriteInt(EE_DELIVERY_YEAR, jahr); //Jahr der Auslieferung der Uhr
+  EEPROM.update(EE_DELIVERY_MONTH, monat); //Monat der Auslieferung
+  EEPROM.update(EE_DELIVERY_DAY, datum); //Tag der auslieferung
+  EEPROM.update(EE_CLOCK_NUMBER, clocknum); //nummer der Uhr
+  EEPROM.update(EE_RTC_FAILURES, 0); // Anzahl der Failures durch RTC auf 0.
+  EEPROM.update(EE_PC_WRITES, 0); // Anzahl der neubeschreibungen von einem PC auf 0.
+  EEPROM.update(EE_RESETS, 0); // Anzahl der resets auf 0.
+  EEPROM.update(EE_INIT_DONE, 1); // init auf 1 (zuletzt, damit eine unterbrochene Einrichtung wiederholt wird)
   red = 0;
   FastLED.clear();
   delay(500);
@@ -203,7 +203,7 @@ void Statistics() { // zaehlt die Laufzeit in 12-Stunden-Schritten im EEPROM (Ze
   // Vorzeichenlose Subtraktion rechnet auch ueber den millis()-Ueberlauf (alle ~49,7 Tage) hinweg richtig.
   if (millis() - lastTime >= 43200000UL) { //wenn mehr als 12 Stunden vergangen sind, dann {...}
     lastTime += 43200000UL; // um genau 12 h weiterschieben, damit sich keine Verzoegerung aufsummiert
-    runtime = eepromReadInt(8) + 1; //bisherige Laufzeit auslesen und um 1 erhöhen
-    eepromWriteInt(8, runtime); // und speicherzelle beschreiben!
+    runtime = eepromReadInt(EE_RUNTIME) + 1; //bisherige Laufzeit auslesen und um 1 erhöhen
+    eepromWriteInt(EE_RUNTIME, runtime); // und speicherzelle beschreiben!
   }
 }

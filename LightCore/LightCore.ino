@@ -22,6 +22,32 @@
 #define MAX_POWER_MA 2000 // Stromgrenze der LEDs in mA (5 V): an das Netzteil anpassen
 #define USB_POWER_MA 400  // Stromgrenze, wenn beim Start ein PC angeschlossen ist (USB-Versorgung)
 
+// Belegung des EEPROMs (Adressen in Byte)
+enum {
+  EE_MAX_DAY = 0,         // Maximale Helligkeit Tag
+  EE_MIN_DAY = 1,         // Minimale Helligkeit Tag
+  EE_RED = 2,             // Farbe R/G/B
+  EE_GREEN = 3,
+  EE_BLUE = 4,
+  EE_TIMECHANGE = 5,      // Sommerzeitumstellung an (1) / aus (0)
+  EE_STARTUPS = 6,        // int (6+7): Anzahl der Starts
+  EE_RUNTIME = 8,         // int (8+9): Laufzeit in 12-Stunden-Schritten
+  EE_DELIVERY_YEAR = 10,  // int (10+11): Jahr der Auslieferung
+  EE_DELIVERY_MONTH = 12,
+  EE_DELIVERY_DAY = 13,
+  EE_CLOCK_NUMBER = 14,   // Nummer der Uhr
+  EE_COLOR_MODE = 15,     // 0 = feste Farbe, 1-3 = Farbwechsel-Modi
+  EE_RTC_FAILURES = 16,   // Anzahl der RTC-Ausfaelle
+  EE_PC_WRITES = 17,      // Anzahl der Befehle vom PC
+  EE_RESETS = 18,         // Anzahl der Resets ('*')
+  EE_MAX_NIGHT = 19,      // Maximale Helligkeit Nacht
+  EE_MIN_NIGHT = 20,      // Minimale Helligkeit Nacht
+  EE_NIGHT_BEGIN = 21,    // Nachtanfang (Stunde)
+  EE_NIGHT_END = 22,      // Nachtende (Stunde)
+  EE_INIT_DONE = 23,      // 1 = EEPROM eingerichtet
+  EE_LDR_DIVIDER = 24     // Teiler fuer den LDR-Wert
+};
+
 DS3231 clock;
 RTCDateTime dt;
 

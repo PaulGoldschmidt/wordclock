@@ -12,32 +12,32 @@ void SerialCommunication() {
     blue = 0;
     WordClock_color();
     if (mode_read.charAt(1) == '%') {
-      EEPROM.update(15, 1); //RGB Cycle anschalten
-      EEPROM.update(2, 255); //Rot auf voll an
-      EEPROM.update(3, 0); // G aus
-      EEPROM.update(4, 0); // B aus
+      EEPROM.update(EE_COLOR_MODE, 1); //RGB Cycle anschalten
+      EEPROM.update(EE_RED, 255); //Rot auf voll an
+      EEPROM.update(EE_GREEN, 0); // G aus
+      EEPROM.update(EE_BLUE, 0); // B aus
       enableColorCycle = 1;
       R = 255;
       B = 0;
       G = 0;
     }
     if (mode_read.charAt(1) == '=') {
-      EEPROM.update(15, 2); //RGB Cycle anschalten
-      EEPROM.update(2, 255); //Rot auf voll an
-      EEPROM.update(3, 0); // G aus
-      EEPROM.update(4, 0); // B aus
+      EEPROM.update(EE_COLOR_MODE, 2); //RGB Cycle anschalten
+      EEPROM.update(EE_RED, 255); //Rot auf voll an
+      EEPROM.update(EE_GREEN, 0); // G aus
+      EEPROM.update(EE_BLUE, 0); // B aus
       enableColorCycle = 2;
     }
     if (mode_read.charAt(1) == '!') {
-      EEPROM.update(15, 3); //RGB Cycle anschalten
-      EEPROM.update(2, 255); //Rot auf voll an
-      EEPROM.update(3, 0); // G aus
-      EEPROM.update(4, 0); // B aus
+      EEPROM.update(EE_COLOR_MODE, 3); //RGB Cycle anschalten
+      EEPROM.update(EE_RED, 255); //Rot auf voll an
+      EEPROM.update(EE_GREEN, 0); // G aus
+      EEPROM.update(EE_BLUE, 0); // B aus
       enableColorCycle = 3;
     }
     if (mode_read.charAt(1) == '/') {
       if (analyzeAndSetRGB()) { // nur bei gueltiger Farbe umschalten
-        EEPROM.update(15, 0); //Automatischer RGB-Farbwechsel aus!
+        EEPROM.update(EE_COLOR_MODE, 0); //Automatischer RGB-Farbwechsel aus!
         enableColorCycle = 0;
       }
     }
@@ -70,19 +70,19 @@ void SerialCommunication() {
   }
   else if (mode_read.charAt(0) == '-') { //Hardreset for debugging
     Serial.println(F("HARD OW_COMPUT"));
-    EEPROM.update(23, 0);
+    EEPROM.update(EE_INIT_DONE, 0);
   }
   else if (mode_read.charAt(0) == '?') {
     int divider = parseNumber(1, 1, 1, 9); // 0 waere eine Division durch 0 in LDR()
     if (divider >= 0) {
-      EEPROM.update(24, divider); //LDR-Teiler neu beschreiben
+      EEPROM.update(EE_LDR_DIVIDER, divider); //LDR-Teiler neu beschreiben
       LDRDivider = divider;
     }
   }
   update_leds = true;
-  Temp1 = EEPROM.read(17); //Anzahl der neubeschreibungen durch den PC zählen.
+  Temp1 = EEPROM.read(EE_PC_WRITES); //Anzahl der neubeschreibungen durch den PC zählen.
   Temp2 = Temp1 + 1;
-  EEPROM.update(17, Temp2);
+  EEPROM.update(EE_PC_WRITES, Temp2);
 }
 byte daysInMonth(byte m, int y) {
   if (m == 2) {
@@ -173,12 +173,12 @@ void analyzeAndSetBrightness() {
   brightness_maxNT = maxNT;
   NTbeginH = beginH;
   NTendH = endH;
-  EEPROM.update(0, brightness_maxDT);
-  EEPROM.update(1, brightness_minDT);
-  EEPROM.update(19, brightness_maxNT);
-  EEPROM.update(20, brightness_minNT);
-  EEPROM.update(21, NTbeginH);
-  EEPROM.update(22, NTendH);
+  EEPROM.update(EE_MAX_DAY, brightness_maxDT);
+  EEPROM.update(EE_MIN_DAY, brightness_minDT);
+  EEPROM.update(EE_MAX_NIGHT, brightness_maxNT);
+  EEPROM.update(EE_MIN_NIGHT, brightness_minNT);
+  EEPROM.update(EE_NIGHT_BEGIN, NTbeginH);
+  EEPROM.update(EE_NIGHT_END, NTendH);
 }
 
 boolean analyzeAndSetRGB() { // '#/RRRGGGBBB', liefert false bei ungueltiger Farbe
@@ -192,9 +192,9 @@ boolean analyzeAndSetRGB() { // '#/RRRGGGBBB', liefert false bei ungueltiger Far
   R = r;
   G = g;
   B = b;
-  EEPROM.update(2, R);
-  EEPROM.update(3, G);
-  EEPROM.update(4, B);
+  EEPROM.update(EE_RED, R);
+  EEPROM.update(EE_GREEN, G);
+  EEPROM.update(EE_BLUE, B);
   return true;
 }
 
@@ -205,7 +205,7 @@ void analyzeAndSetTimechange() {
     return;
   }
   enableTimechange = value;
-  EEPROM.update(5, enableTimechange);
+  EEPROM.update(EE_TIMECHANGE, enableTimechange);
 }
 
 void sendConfigOfClockToPC() {
@@ -276,9 +276,9 @@ void selfcheck() {
 void reset() { // Werkseinstellungen wiederherstellen und sofort uebernehmen
   byte Temp1;
   writeDefaultSettings();
-  Temp1 = EEPROM.read(18); //Anzahl der resets zählen.
+  Temp1 = EEPROM.read(EE_RESETS); //Anzahl der resets zählen.
   Temp1 = Temp1 + 1;
-  EEPROM.update(18, Temp1); //reset + 1
+  EEPROM.update(EE_RESETS, Temp1); //reset + 1
   loadSettings(); // vorher galten die alten Werte bis zum naechsten Neustart weiter
 }
 void SerialDebug() {
