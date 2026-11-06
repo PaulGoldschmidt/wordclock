@@ -35,6 +35,7 @@ boolean summertime_EU() {
 
 bool RTC_Check() { // true = RTC liefert keine gueltige Zeit
   // Ein fehlendes/defektes RTC liefert 0xFF-Bytes -> alle Felder 165 (Jahr 2165): deshalb alle Bereiche pruefen.
-  return jahr <= 2010 || jahr > 2099 || monat < 1 || monat > 12 || datum < 1 || datum > 31 ||
+  return jahr <= 2015 || jahr > 2099 || // <= 2015: wie bisher im Selbsttest als "nicht gestellt" gewertet
+         monat < 1 || monat > 12 || datum < 1 || datum > 31 ||
          stunde > 23 || minute > 59 || sekunde > 59;
 }

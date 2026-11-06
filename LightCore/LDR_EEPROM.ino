@@ -137,7 +137,9 @@ void EEPROM_Read() {
       Serial.println(brightness_minDT);
       Serial.print(F("R/G/B: "));
       Serial.print(R);
+      Serial.print(F("/"));
       Serial.print(G);
+      Serial.print(F("/"));
       Serial.println(B);
       Serial.print(F("Startannzahl: "));
       Serial.println(startups);

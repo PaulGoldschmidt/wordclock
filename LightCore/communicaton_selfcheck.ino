@@ -257,14 +257,14 @@ void selfcheck() {
   else if (sensorValue == 255) {
     Serial.println(F("LDRTH"));
   }
-  else if (sensorValue == 0) {
+  else if (sensorValue <= 1) { // 1 landete vorher bei "PROBLEM"
     Serial.println(F("LDRTL"));
   }
   else {
     Serial.println(F("PROBLEM"));
   }
   RTCRead();
-  if (rtcError || jahr <= 2015) {
+  if (rtcError) { // gleiche Pruefung wie im Betrieb (RTC_Check)
     Serial.println(F("RTCNOTSET"));
   }
   else {
