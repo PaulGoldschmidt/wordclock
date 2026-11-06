@@ -28,7 +28,7 @@ boolean SerialDebug_enable = true;
 
 byte red, green, blue, sekunde, minute, stunde, datum, dow, monat, lastminute, brightness, brightness_maxNT, brightness_maxDT, brightness_minNT, brightness_minDT, NTbeginH, NTendH, enableTimechange, enableColorCycle, LDRDivider, i, InitalsetupDone;
 int jahr, startups, runtime, R, G, B; 
-unsigned long time, lastTime;
+uint32_t lastTime; // uint32_t wie millis() auf AVR: die Differenz millis() - lastTime ist damit ueberlaufsicher
 boolean update_leds = false, lupdate_leds = false, rtcError = false;
 String mode_read = "";
 int nos = 125; //Number of LEDs

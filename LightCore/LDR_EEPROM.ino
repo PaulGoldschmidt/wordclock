@@ -200,29 +200,11 @@ void EEPROM_Initialsetup() {
   delay(500);
 }
 
-void Statistics() {
-  unsigned long differenceInTime, overflowError = 0, correction;
-  time = millis();
-  if (time < lastTime) { //nach 50 Tagen wird millis wieder 0, deshalb hier die Abfrage danach
-    lastTime = 0;
-    overflowError++;
-    correction = 18167295 * overflowError; //zeit, die dann übersprungen wurde dank dem reset
-    if (correction >= 43200000) {
-      long temp1;
-      temp1 = correction / 43200000;
-      time = correction - (43200000 * temp1);
-    }
-  }
-
-  else {
-    differenceInTime = time - lastTime;
-  }
-
-  if (differenceInTime >= 43200000) { //wenn mehr als 12 Stunden vergangen sind, dann {...}
-    int newRuntime;
-    runtime = eepromReadInt(8); //bisherige Laufzeit auslesen.
-    newRuntime = runtime + 1; //variable um 1 erhöhen
-    eepromWriteInt(8, newRuntime); // und speicherzelle beschreiben!
-    lastTime = time;
+void Statistics() { // zaehlt die Laufzeit in 12-Stunden-Schritten im EEPROM (Zelle 8+9)
+  // Vorzeichenlose Subtraktion rechnet auch ueber den millis()-Ueberlauf (alle ~49,7 Tage) hinweg richtig.
+  if (millis() - lastTime >= 43200000UL) { //wenn mehr als 12 Stunden vergangen sind, dann {...}
+    lastTime += 43200000UL; // um genau 12 h weiterschieben, damit sich keine Verzoegerung aufsummiert
+    runtime = eepromReadInt(8) + 1; //bisherige Laufzeit auslesen und um 1 erhöhen
+    eepromWriteInt(8, runtime); // und speicherzelle beschreiben!
   }
 }

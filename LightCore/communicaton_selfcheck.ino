@@ -315,7 +315,7 @@ void SerialDebug() {
   Serial.print(F("Bisherige Laufzeit in 12h: "));
   Serial.println(runtime);
   Serial.print(F("Der Microcontroller laeuft seit "));
-  Serial.print(time);
+  Serial.print(millis());
   Serial.println(F(" Millisekunden."));
   Serial.print(F("Sommerzeitumstellung aktiv: "));
   Serial.println(summertime_EU());
