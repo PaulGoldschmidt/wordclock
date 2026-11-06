@@ -82,6 +82,16 @@ void SerialCommunication() {
   Temp2 = Temp1 + 1;
   EEPROM.write(17, Temp2);
 }
+byte daysInMonth(byte m, int y) {
+  if (m == 2) {
+    return (y % 4 == 0) ? 29 : 28; // im RTC-Bereich 2000-2099 ist jedes durch 4 teilbare Jahr ein Schaltjahr
+  }
+  if (m == 4 || m == 6 || m == 9 || m == 11) {
+    return 30;
+  }
+  return 31;
+}
+
 void analyzeAndSetTime(const String &inputWert) { // Referenz statt Kopie: spart RAM
   byte Temp1, Temp2, Temp3;
   Temp1 = (byte)mode_read[1] - 48;
@@ -107,10 +117,22 @@ void analyzeAndSetTime(const String &inputWert) { // Referenz statt Kopie: spart
   Temp1 = (byte)mode_read[11] - 48;
   Temp2 = (byte)mode_read[12] - 48;
   Temp3 = Temp1 * 10 + Temp2;
-  sekunde = Temp3 + 5;
-  if (sekunde >= 60) {
+  sekunde = Temp3 + 5; // Ausgleich fuer die Dauer von Uebertragung und Serial-Timeout
+  if (sekunde >= 60) { // Uebertrag bis ins Jahr, sonst landet z.B. "23:60" im RTC
     sekunde = sekunde - 60;
-    minute++;
+    if (++minute >= 60) {
+      minute = 0;
+      if (++stunde >= 24) {
+        stunde = 0;
+        if (++datum > daysInMonth(monat, jahr)) {
+          datum = 1;
+          if (++monat > 12) {
+            monat = 1;
+            jahr++;
+          }
+        }
+      }
+    }
   }
   delay(100);
   Serial.println(mode_read);
