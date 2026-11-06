@@ -181,7 +181,7 @@ void analyzeAndSetBrightness() {
   EEPROM.update(EE_NIGHT_END, NTendH);
 }
 
-boolean analyzeAndSetRGB() { // '#/RRRGGGBBB', liefert false bei ungueltiger Farbe
+bool analyzeAndSetRGB() { // '#/RRRGGGBBB', liefert false bei ungueltiger Farbe
   int r = parseNumber(2, 3, 0, 255);
   int g = parseNumber(5, 3, 0, 255);
   int b = parseNumber(8, 3, 0, 255);
@@ -246,7 +246,7 @@ void CheckForSerial() {
 
 void selfcheck() {
   FastLED.setBrightness(100);
-  fill_solid(leds, nos, CRGB::White);
+  fill_solid(leds, NUM_LEDS, CRGB::White);
   FastLED.show();
   delay(15000);
   counting();

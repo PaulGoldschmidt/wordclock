@@ -4,8 +4,8 @@ uint8_t gHue = 0; // rotating "base color" used by many of the patterns
 void confetti()
 {
   // random colored speckles that blink in and fade smoothly
-  fadeToBlackBy(leds, nos, 10);
-  int pos = random16(nos);
+  fadeToBlackBy(leds, NUM_LEDS, 10);
+  int pos = random16(NUM_LEDS);
   leds[pos] += CHSV( gHue + random8(64), 200, 255);
 }
 
@@ -147,7 +147,7 @@ void counting() { //hochzählen auf festgelegten Wert.
   FastLED.clear();
   FastLED.setBrightness(50);
   int counter = 0;
-  while (counter != nos) {
+  while (counter != NUM_LEDS) {
     leds[counter].setRGB(255, 255, 255);
     FastLED.show();
     counter++;

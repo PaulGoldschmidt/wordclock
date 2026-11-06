@@ -20,7 +20,7 @@ void RTCRead() {
   if (summertime_EU() == true) {stunde = (stunde + 1) % 24;} // Prüft ob Summerzeit ist (23 Uhr + 1 -> 0 Uhr, nicht 24)
 }
 
-boolean summertime_EU() {
+bool summertime_EU() {
   if (enableTimechange != 1) {
     return false; // Zeitumstellung aus (oder ungueltiger Wert im EEPROM)
   }

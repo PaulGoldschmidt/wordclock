@@ -2,7 +2,7 @@ int sensorValue, maxBrightnessCalc, minBrightnessCalc, lsensorValue;
 byte applied_value;
 byte value_now;
 
-boolean isNight() { // Nachtzeitraum ueber Mitternacht (z.B. 23 -> 6) oder innerhalb eines Tages (z.B. 0 -> 7)
+bool isNight() { // Nachtzeitraum ueber Mitternacht (z.B. 23 -> 6) oder innerhalb eines Tages (z.B. 0 -> 7)
   if (NTbeginH > NTendH) {
     return (stunde >= NTbeginH) || (stunde < NTendH);
   }
@@ -159,7 +159,7 @@ void EEPROM_Read() {
       const CRGB testColors[] = {CRGB::Red, CRGB::Green, CRGB::Blue, CRGB::White};
       for (byte c = 0; c < 4; c++) {
         FastLED.setBrightness(20); // bei jeder Farbe neu: ein serieller Befehl setzt die Helligkeit auf 255
-        fill_solid(leds, nos, testColors[c]);
+        fill_solid(leds, NUM_LEDS, testColors[c]);
         FastLED.show();
         delay(1000);
         CheckForSerial();
