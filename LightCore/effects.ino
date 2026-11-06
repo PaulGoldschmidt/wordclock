@@ -34,6 +34,7 @@ void startup() {
     else {
       brightness = brightness_maxDT;
     }
+  byte targetBrightness = brightness; // Tag- oder Nacht-Maximum, auch fuer das Logo unten
   FastLED.setBrightness(brightness);
   while (timer != 750) {
     confetti();
@@ -56,7 +57,7 @@ void startup() {
       }
     }
     FastLED.clear();
-    while (brightness != brightness_maxDT) {
+    while (brightness != targetBrightness) { // war immer brightness_maxDT: nachts volle Tageshelligkeit
     WordClock();
       brightness++;
       FastLED.setBrightness(brightness);
