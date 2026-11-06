@@ -80,6 +80,39 @@ int eepromReadInt(int adr) {
   return low + ((high << 8) & 0xFF00);
 }
 
+void loadSettings() { // Einstellungen aus dem EEPROM in den RAM uebernehmen
+  brightness_maxDT = EEPROM.read(0);
+  brightness_minDT = EEPROM.read(1);
+  R = EEPROM.read(2);
+  G = EEPROM.read(3);
+  B = EEPROM.read(4);
+  enableTimechange = EEPROM.read(5);
+  enableColorCycle = EEPROM.read(15);
+  brightness_maxNT = EEPROM.read(19);
+  brightness_minNT = EEPROM.read(20);
+  NTbeginH = EEPROM.read(21);
+  NTendH = EEPROM.read(22);
+  LDRDivider = EEPROM.read(24);
+  if (LDRDivider == 0) {
+    LDRDivider = 3; // 0 (z.B. von einem alten "?0"-Befehl) waere eine Division durch 0 in LDR()
+  }
+}
+
+void writeDefaultSettings() { // Werkseinstellungen, gemeinsam fuer Ersteinrichtung und Reset ('*')
+  EEPROM.write(0, 255); //Maximale Helligkeit Tagsüber mit der neuen PCB-Version
+  EEPROM.write(1, 35); //Minimale Helligkeit Tagsüber
+  EEPROM.write(2, 0); // R
+  EEPROM.write(3, 204); // G
+  EEPROM.write(4, 255); // B
+  EEPROM.write(5, 1); //timechange enabled
+  EEPROM.write(15, 0); // RGB-Cycle deaktiveren.
+  EEPROM.write(19, 60); // Maximale Helligkeit Nachts
+  EEPROM.write(20, 7); // Minimale Helligkeit Nachts
+  EEPROM.write(21, 23); // Nachtanfang in Stunden
+  EEPROM.write(22, 6); // Nachtende in Stunden
+  EEPROM.write(24, 3); // LDR-Divider auf 3 setzen.
+}
+
 void EEPROM_Read() {
   int newStartups;
   byte kdnnr, dayOfAuslieferung;
@@ -87,25 +120,11 @@ void EEPROM_Read() {
   if (InitalsetupDone == 1) {
     kdnnr = EEPROM.read(14);
     dayOfAuslieferung =  EEPROM.read(13);
-    brightness_maxDT = EEPROM.read(0);
-    brightness_minDT = EEPROM.read(1);
-    R = EEPROM.read(2);
-    G = EEPROM.read(3);
-    B = EEPROM.read(4);
-    enableTimechange = EEPROM.read(5);
+    loadSettings();
     startups = eepromReadInt(6); // lese die anzahl der Startups im EEPROM aus (Speicherzelle 6+7)
     newStartups = startups + 1;
     eepromWriteInt(6, newStartups);
     runtime = eepromReadInt(8);
-    enableColorCycle = EEPROM.read(15);
-    brightness_maxNT = EEPROM.read(19);
-    brightness_minNT = EEPROM.read(20);
-    NTbeginH = EEPROM.read(21);
-    NTendH = EEPROM.read(22);
-    LDRDivider = EEPROM.read(24);
-    if (LDRDivider == 0) {
-      LDRDivider = 3; // 0 (z.B. von einem alten "?0"-Befehl) waere eine Division durch 0 in LDR()
-    }
     if (SerialDebug_enable == true) {
       Serial.println(F("EEPROM ausgelesen."));
       Serial.print(F("Nummer: "));
@@ -158,28 +177,17 @@ void EEPROM_Initialsetup() {
   blue = 0;
   byte clocknum = random(1, 255);
   WordClock_color();
-  EEPROM.write(0, 255); //Maximale Helligkeit Tagsüber mit der neuen PCB-Version
-  EEPROM.write(1, 35); //Minimale Helligkeit Tagsüber
-  EEPROM.write(2, 0); // R
-  EEPROM.write(3, 204); // G
-  EEPROM.write(4, 255); // B
-  EEPROM.write(5, 1); //timechange enabled
+  writeDefaultSettings();
   eepromWriteInt(6, 0); //startups = 0
   eepromWriteInt(8, 0); //runtime = 0
   eepromWriteInt(10, jahr); //Jahr der Auslieferung der Uhr
   EEPROM.write(12, monat); //Monat der Auslieferung
   EEPROM.write(13, datum); //Tag der auslieferung
   EEPROM.write(14, clocknum); //nummer der Uhr
-  EEPROM.write(15, 0); // RGB-Cycle deaktiveren.
   EEPROM.write(16, 0); // Anzahl der Failures durch RTC auf 0.
   EEPROM.write(17, 0); // Anzahl der neubeschreibungen von einem PC auf 0.
   EEPROM.write(18, 0); // Anzahl der resets auf 0.
-  EEPROM.write(19, 60); // Maximale Helligkeit Nachts
-  EEPROM.write(20, 7); // Minimale Helligkeit Nachts
-  EEPROM.write(21, 23); // Nachtanfang in Stunden
-  EEPROM.write(22, 6); // Nachtende in Stunden
-  EEPROM.write(23, 1); // init auf 1
-  EEPROM.write(24, 3); // LDR-Divider auf 3 setzen.
+  EEPROM.write(23, 1); // init auf 1 (zuletzt, damit eine unterbrochene Einrichtung wiederholt wird)
   red = 0;
   FastLED.clear();
   delay(500);

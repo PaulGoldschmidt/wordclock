@@ -273,23 +273,13 @@ void selfcheck() {
   }
 }
 
-void reset() {
+void reset() { // Werkseinstellungen wiederherstellen und sofort uebernehmen
   byte Temp1;
-  EEPROM.write(0, 155); //Maximale Helligkeit
-  EEPROM.write(1, 35); //Minimale Helligkeit
-  EEPROM.write(2, 0); // R
-  EEPROM.write(3, 204); // G
-  EEPROM.write(4, 255); // B
-  EEPROM.write(5, 1); //timechange enabled
-  EEPROM.write(15, 0); // RGB-Cycle deaktiveren.
+  writeDefaultSettings();
   Temp1 = EEPROM.read(18); //Anzahl der resets zählen.
   Temp1 = Temp1 + 1;
   EEPROM.write(18, Temp1); //reset + 1
-  EEPROM.write(19, 60); // Maximale Helligkeit Nachts
-  EEPROM.write(20, 7); // Minimale Helligkeit Nachts
-  EEPROM.write(21, 23); // Nachtanfang in Stunden
-  EEPROM.write(22, 6); // Nachtende in Stunden
-  EEPROM.write(24, 3); // LDR-Divider auf 3 setzen.
+  loadSettings(); // vorher galten die alten Werte bis zum naechsten Neustart weiter
 }
 void SerialDebug() {
   Serial.print(F("Loop durchlaufen am "));
