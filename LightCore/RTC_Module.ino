@@ -1,0 +1,46 @@
+bool Century=false;
+bool h12;
+bool PM;
+DS3231 Clock;
+
+void RTCRead() {
+  clock.begin();
+  dt = clock.getDateTime();
+  
+  jahr = dt.year;
+  monat = dt.month;
+  datum = dt.day;
+  stunde = dt.hour;
+  minute = dt.minute;
+  sekunde = dt.second;
+  if (RTC_Check() == true) {
+    Error_RTC();
+  }
+  delay(250);
+  Wire.endTransmission();
+  if (summertime_EU() == true) {stunde = stunde + 1;} // Prüft ob Summerzeit ist
+}
+
+boolean summertime_EU() {
+  if (enableTimechange == 1) {
+    byte tzHours = 1;
+    if (monat<3 || monat>10) return false; // keine Sommerzeit in Jan, Feb, Nov, Dez
+    if (monat>3 && monat<10) return true; // Sommerzeit in Apr, Mai, Jun, Jul, Aug, Sep
+    if (monat==3 && (stunde + 24 * datum)>=(1 + tzHours + 24*(31 - (5 * jahr /4 + 4) % 7)) || monat==10 && (stunde + 24 * datum)<(1 + tzHours + 24*(31 - (5 * jahr /4 + 1) % 7)))
+      return true;
+    else
+      return false;
+  }
+  else if (enableTimechange == 0) {
+     return false;
+  }
+}
+
+bool RTC_Check() {
+  if (jahr <= 2010) {
+    return true;
+  }
+  else {
+    return false;
+  }
+}
