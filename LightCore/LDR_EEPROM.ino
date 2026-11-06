@@ -3,12 +3,19 @@ byte applied_value;
 byte value_now;
 void WordClock();
 
+boolean isNight() { // Nachtzeitraum ueber Mitternacht (z.B. 23 -> 6) oder innerhalb eines Tages (z.B. 0 -> 7)
+  if (NTbeginH > NTendH) {
+    return (stunde >= NTbeginH) || (stunde < NTendH);
+  }
+  return (stunde >= NTbeginH) && (stunde < NTendH);
+}
+
 void LDR() {
   sensorValue = analogRead(A0) / LDRDivider;
   if (sensorValue > 255) {
     sensorValue = 255; //wenn die Helligkeit im Raum über 255 ist, dann auf 255 setzten.
   }
-  if ((NTbeginH <= stunde) || (NTendH > stunde)) { //helligkeit nachts
+  if (isNight()) { //helligkeit nachts
     maxBrightnessCalc = brightness_maxNT;
     minBrightnessCalc = brightness_minNT;
     Serial.println(F("Es ist Nacht!"));

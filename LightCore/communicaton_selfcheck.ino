@@ -200,7 +200,7 @@ void sendConfigOfClockToPC() {
 }
 
 void checkIfNight() {
-  if ((NTbeginH <= stunde) || (NTendH > stunde)) {
+  if (isNight()) {
     Serial.println(F("Es scheint **Nacht** zu sein. Der aktuelle LDR-Wert ist:"));
     Serial.println(analogRead(A0));
   }

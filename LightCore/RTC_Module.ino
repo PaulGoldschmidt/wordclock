@@ -22,7 +22,7 @@ void RTCRead() {
     rtcError = false;
     update_leds = true; // Uhrzeit nach der Fehleranzeige sofort neu zeichnen
   }
-  if (summertime_EU() == true) {stunde = stunde + 1;} // Prüft ob Summerzeit ist
+  if (summertime_EU() == true) {stunde = (stunde + 1) % 24;} // Prüft ob Summerzeit ist (23 Uhr + 1 -> 0 Uhr, nicht 24)
 }
 
 boolean summertime_EU() {

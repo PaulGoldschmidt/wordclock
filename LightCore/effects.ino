@@ -28,7 +28,7 @@ void startup() {
   }
   if (SerialAvailable == false) {
     SerialDebug_enable = false;
-    if ((NTbeginH <= stunde) || (NTendH > stunde)) {
+    if (isNight()) {
       brightness = brightness_maxNT;
     }
     else {
