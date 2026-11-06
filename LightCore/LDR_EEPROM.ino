@@ -68,8 +68,8 @@ void eepromWriteInt(int adr, int wert) {
   byte low, high;
   low = wert & 0xFF;
   high = (wert >> 8) & 0xFF;
-  EEPROM.write(adr, low); // dauert 3,3ms
-  EEPROM.write(adr + 1, high);
+  EEPROM.update(adr, low); // schreibt (3,3 ms) nur, wenn sich der Wert aendert
+  EEPROM.update(adr + 1, high);
   return;
 }
 
@@ -99,18 +99,18 @@ void loadSettings() { // Einstellungen aus dem EEPROM in den RAM uebernehmen
 }
 
 void writeDefaultSettings() { // Werkseinstellungen, gemeinsam fuer Ersteinrichtung und Reset ('*')
-  EEPROM.write(0, 255); //Maximale Helligkeit Tagsüber mit der neuen PCB-Version
-  EEPROM.write(1, 35); //Minimale Helligkeit Tagsüber
-  EEPROM.write(2, 0); // R
-  EEPROM.write(3, 204); // G
-  EEPROM.write(4, 255); // B
-  EEPROM.write(5, 1); //timechange enabled
-  EEPROM.write(15, 0); // RGB-Cycle deaktiveren.
-  EEPROM.write(19, 60); // Maximale Helligkeit Nachts
-  EEPROM.write(20, 7); // Minimale Helligkeit Nachts
-  EEPROM.write(21, 23); // Nachtanfang in Stunden
-  EEPROM.write(22, 6); // Nachtende in Stunden
-  EEPROM.write(24, 3); // LDR-Divider auf 3 setzen.
+  EEPROM.update(0, 255); //Maximale Helligkeit Tagsüber mit der neuen PCB-Version
+  EEPROM.update(1, 35); //Minimale Helligkeit Tagsüber
+  EEPROM.update(2, 0); // R
+  EEPROM.update(3, 204); // G
+  EEPROM.update(4, 255); // B
+  EEPROM.update(5, 1); //timechange enabled
+  EEPROM.update(15, 0); // RGB-Cycle deaktiveren.
+  EEPROM.update(19, 60); // Maximale Helligkeit Nachts
+  EEPROM.update(20, 7); // Minimale Helligkeit Nachts
+  EEPROM.update(21, 23); // Nachtanfang in Stunden
+  EEPROM.update(22, 6); // Nachtende in Stunden
+  EEPROM.update(24, 3); // LDR-Divider auf 3 setzen.
 }
 
 void EEPROM_Read() {
@@ -181,13 +181,13 @@ void EEPROM_Initialsetup() {
   eepromWriteInt(6, 0); //startups = 0
   eepromWriteInt(8, 0); //runtime = 0
   eepromWriteInt(10, jahr); //Jahr der Auslieferung der Uhr
-  EEPROM.write(12, monat); //Monat der Auslieferung
-  EEPROM.write(13, datum); //Tag der auslieferung
-  EEPROM.write(14, clocknum); //nummer der Uhr
-  EEPROM.write(16, 0); // Anzahl der Failures durch RTC auf 0.
-  EEPROM.write(17, 0); // Anzahl der neubeschreibungen von einem PC auf 0.
-  EEPROM.write(18, 0); // Anzahl der resets auf 0.
-  EEPROM.write(23, 1); // init auf 1 (zuletzt, damit eine unterbrochene Einrichtung wiederholt wird)
+  EEPROM.update(12, monat); //Monat der Auslieferung
+  EEPROM.update(13, datum); //Tag der auslieferung
+  EEPROM.update(14, clocknum); //nummer der Uhr
+  EEPROM.update(16, 0); // Anzahl der Failures durch RTC auf 0.
+  EEPROM.update(17, 0); // Anzahl der neubeschreibungen von einem PC auf 0.
+  EEPROM.update(18, 0); // Anzahl der resets auf 0.
+  EEPROM.update(23, 1); // init auf 1 (zuletzt, damit eine unterbrochene Einrichtung wiederholt wird)
   red = 0;
   FastLED.clear();
   delay(500);

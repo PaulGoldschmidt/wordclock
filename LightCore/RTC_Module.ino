@@ -15,7 +15,7 @@ void RTCRead() {
   if (RTC_Check() == true) {
     if (!rtcError) { // Fehler nur einmal pro Ausfall zaehlen (vorher bei jedem Loop -> EEPROM-Verschleiss)
       rtcError = true;
-      EEPROM.write(16, EEPROM.read(16) + 1);
+      EEPROM.update(16, EEPROM.read(16) + 1);
     }
   }
   else if (rtcError) {

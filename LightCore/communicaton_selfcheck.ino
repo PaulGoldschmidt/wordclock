@@ -12,32 +12,32 @@ void SerialCommunication() {
     blue = 0;
     WordClock_color();
     if (mode_read.charAt(1) == '%') {
-      EEPROM.write(15, 1); //RGB Cycle anschalten
-      EEPROM.write(2, 255); //Rot auf voll an
-      EEPROM.write(3, 0); // G aus
-      EEPROM.write(4, 0); // B aus
+      EEPROM.update(15, 1); //RGB Cycle anschalten
+      EEPROM.update(2, 255); //Rot auf voll an
+      EEPROM.update(3, 0); // G aus
+      EEPROM.update(4, 0); // B aus
       enableColorCycle = 1;
       R = 255;
       B = 0;
       G = 0;
     }
     if (mode_read.charAt(1) == '=') {
-      EEPROM.write(15, 2); //RGB Cycle anschalten
-      EEPROM.write(2, 255); //Rot auf voll an
-      EEPROM.write(3, 0); // G aus
-      EEPROM.write(4, 0); // B aus
+      EEPROM.update(15, 2); //RGB Cycle anschalten
+      EEPROM.update(2, 255); //Rot auf voll an
+      EEPROM.update(3, 0); // G aus
+      EEPROM.update(4, 0); // B aus
       enableColorCycle = 2;
     }
     if (mode_read.charAt(1) == '!') {
-      EEPROM.write(15, 3); //RGB Cycle anschalten
-      EEPROM.write(2, 255); //Rot auf voll an
-      EEPROM.write(3, 0); // G aus
-      EEPROM.write(4, 0); // B aus
+      EEPROM.update(15, 3); //RGB Cycle anschalten
+      EEPROM.update(2, 255); //Rot auf voll an
+      EEPROM.update(3, 0); // G aus
+      EEPROM.update(4, 0); // B aus
       enableColorCycle = 3;
     }
     if (mode_read.charAt(1) == '/') {
       if (analyzeAndSetRGB()) { // nur bei gueltiger Farbe umschalten
-        EEPROM.write(15, 0); //Automatischer RGB-Farbwechsel aus!
+        EEPROM.update(15, 0); //Automatischer RGB-Farbwechsel aus!
         enableColorCycle = 0;
       }
     }
@@ -70,19 +70,19 @@ void SerialCommunication() {
   }
   else if (mode_read.charAt(0) == '-') { //Hardreset for debugging
     Serial.println(F("HARD OW_COMPUT"));
-    EEPROM.write(23, 0);
+    EEPROM.update(23, 0);
   }
   else if (mode_read.charAt(0) == '?') {
     int divider = parseNumber(1, 1, 1, 9); // 0 waere eine Division durch 0 in LDR()
     if (divider >= 0) {
-      EEPROM.write(24, divider); //LDR-Teiler neu beschreiben
+      EEPROM.update(24, divider); //LDR-Teiler neu beschreiben
       LDRDivider = divider;
     }
   }
   update_leds = true;
   Temp1 = EEPROM.read(17); //Anzahl der neubeschreibungen durch den PC zählen.
   Temp2 = Temp1 + 1;
-  EEPROM.write(17, Temp2);
+  EEPROM.update(17, Temp2);
 }
 byte daysInMonth(byte m, int y) {
   if (m == 2) {
@@ -173,12 +173,12 @@ void analyzeAndSetBrightness() {
   brightness_maxNT = maxNT;
   NTbeginH = beginH;
   NTendH = endH;
-  EEPROM.write(0, brightness_maxDT);
-  EEPROM.write(1, brightness_minDT);
-  EEPROM.write(19, brightness_maxNT);
-  EEPROM.write(20, brightness_minNT);
-  EEPROM.write(21, NTbeginH);
-  EEPROM.write(22, NTendH);
+  EEPROM.update(0, brightness_maxDT);
+  EEPROM.update(1, brightness_minDT);
+  EEPROM.update(19, brightness_maxNT);
+  EEPROM.update(20, brightness_minNT);
+  EEPROM.update(21, NTbeginH);
+  EEPROM.update(22, NTendH);
 }
 
 boolean analyzeAndSetRGB() { // '#/RRRGGGBBB', liefert false bei ungueltiger Farbe
@@ -192,9 +192,9 @@ boolean analyzeAndSetRGB() { // '#/RRRGGGBBB', liefert false bei ungueltiger Far
   R = r;
   G = g;
   B = b;
-  EEPROM.write(2, R);
-  EEPROM.write(3, G);
-  EEPROM.write(4, B);
+  EEPROM.update(2, R);
+  EEPROM.update(3, G);
+  EEPROM.update(4, B);
   return true;
 }
 
@@ -205,7 +205,7 @@ void analyzeAndSetTimechange() {
     return;
   }
   enableTimechange = value;
-  EEPROM.write(5, enableTimechange);
+  EEPROM.update(5, enableTimechange);
 }
 
 void sendConfigOfClockToPC() {
@@ -278,7 +278,7 @@ void reset() { // Werkseinstellungen wiederherstellen und sofort uebernehmen
   writeDefaultSettings();
   Temp1 = EEPROM.read(18); //Anzahl der resets zählen.
   Temp1 = Temp1 + 1;
-  EEPROM.write(18, Temp1); //reset + 1
+  EEPROM.update(18, Temp1); //reset + 1
   loadSettings(); // vorher galten die alten Werte bis zum naechsten Neustart weiter
 }
 void SerialDebug() {
