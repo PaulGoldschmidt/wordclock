@@ -14,7 +14,14 @@ void RTCRead() {
   minute = dt.minute;
   sekunde = dt.second;
   if (RTC_Check() == true) {
-    Error_RTC();
+    if (!rtcError) { // Fehler nur einmal pro Ausfall zaehlen (vorher bei jedem Loop -> EEPROM-Verschleiss)
+      rtcError = true;
+      EEPROM.write(16, EEPROM.read(16) + 1);
+    }
+  }
+  else if (rtcError) {
+    rtcError = false;
+    update_leds = true; // Uhrzeit nach der Fehleranzeige sofort neu zeichnen
   }
   delay(250);
   Wire.endTransmission();

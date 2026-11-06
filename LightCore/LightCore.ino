@@ -29,7 +29,7 @@ boolean SerialDebug_enable = true;
 byte red, green, blue, sekunde, minute, stunde, datum, dow, monat, lastminute, brightness, brightness_maxNT, brightness_maxDT, brightness_minNT, brightness_minDT, NTbeginH, NTendH, enableTimechange, enableColorCycle, LDRDivider, i, InitalsetupDone;
 int jahr, startups, runtime, R, G, B; 
 unsigned long time, lastTime;
-boolean update_leds = false, lupdate_leds = false, RTC_set = false;
+boolean update_leds = false, lupdate_leds = false, rtcError = false;
 String mode_read = "";
 int nos = 125; //Number of LEDs
 
@@ -54,6 +54,11 @@ void setup() {
 void loop() {
   CheckForSerial();
   RTCRead(); //lese die Zeit ein
+  if (rtcError) { // keine gueltige Zeit: Logo gruen blinken lassen, bis die Zeit per '@' gesetzt wird
+    Error_RTC();
+    Statistics();
+    return;
+  }
   if (SerialDebug_enable == true) {SerialDebug();}
   LDR();
   LED_Routine();

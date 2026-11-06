@@ -5,7 +5,6 @@ void SerialCommunication() {
   mode_read = Serial.readString();
   if (mode_read.charAt(0) == '@') {
     analyzeAndSetTime(mode_read);
-    RTC_set = true;
   }
   else if (mode_read.charAt(0) == '#') { // Hex Color
     red = 255;
