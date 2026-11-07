@@ -91,6 +91,9 @@ void loadSettings() { // Einstellungen aus dem EEPROM in den RAM uebernehmen
   B = EEPROM.read(EE_BLUE);
   enableTimechange = EEPROM.read(EE_TIMECHANGE);
   enableColorCycle = EEPROM.read(EE_COLOR_MODE);
+  if (enableColorCycle > 3) {
+    enableColorCycle = 0; // unbekannter Modus im EEPROM: feste Farbe
+  }
   if (enableColorCycle == 1) {
     startColorCycle(); // R/G/B im EEPROM sind die feste Farbe, der Farbwechsel startet bei Rot
   }
