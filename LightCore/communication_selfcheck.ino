@@ -210,10 +210,11 @@ void analyzeAndSetTimechange() {
 
 void sendConfigOfClockToPC() {
   Serial.println(F("STATUS BEGIN"));
-  Serial.println(brightness_maxDT);
-  Serial.println(brightness_minDT);
-  Serial.println(brightness_maxNT);
-  Serial.println(brightness_minNT);
+  // Helligkeit aus dem EEPROM: mit PC am USB ist sie im RAM voruebergehend auf 39/40 begrenzt (startup())
+  Serial.println(EEPROM.read(EE_MAX_DAY));
+  Serial.println(EEPROM.read(EE_MIN_DAY));
+  Serial.println(EEPROM.read(EE_MAX_NIGHT));
+  Serial.println(EEPROM.read(EE_MIN_NIGHT));
   Serial.println(NTbeginH);
   Serial.println(NTendH);
   Serial.println(R);
@@ -223,6 +224,13 @@ void sendConfigOfClockToPC() {
   Serial.println(enableTimechange);
   Serial.println(startups);
   Serial.println(runtime);
+  // ab 6.2: zusaetzliche Werte als "NAME=Wert" (die ersten 13 Zeilen bleiben wie in 6.1)
+  Serial.print(F("LDR="));
+  Serial.println(LDRDivider);
+  Serial.print(F("NR="));
+  Serial.println(EEPROM.read(EE_CLOCK_NUMBER));
+  Serial.print(F("VERSION="));
+  Serial.println(F(VERSION));
   Serial.println(F("STATUS END"));
 }
 

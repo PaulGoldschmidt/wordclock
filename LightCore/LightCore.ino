@@ -18,7 +18,7 @@
 #include <EEPROM.h>
 #include <Wire.h>
 
-#define VERSION "6.1" //Aktulle Version der Software
+#define VERSION "6.2" //Aktuelle Version der Software (6.2: Fehlerbehebungen 2026, an der Webseite von 6.1 unterscheidbar)
 #define MAX_POWER_MA 2000 // Stromgrenze der LEDs in mA (5 V): an das Netzteil anpassen
 #define USB_POWER_MA 400  // Stromgrenze, wenn beim Start ein PC angeschlossen ist (USB-Versorgung)
 
