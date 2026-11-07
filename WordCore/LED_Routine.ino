@@ -1,5 +1,5 @@
-// Modus 1 laeuft von Rot aus einmal um den Farbkreis (R + G + B bleibt 255) und funktioniert nur
-// von einem Punkt auf diesem Kreis aus, deshalb startet er immer hier.
+// Mode 1 walks around the colour wheel starting at red (R + G + B stays 255). ColorCycle() only works
+// from a point on that wheel, so the cycle always starts here.
 void startColorCycle() {
   R = 255;
   G = 0;
@@ -21,7 +21,7 @@ void ColorCycle() {
   }
 }
 
-// Farben je Matrix-Zeile fuer den Farbmodus 3 (Zeile = LED-Nummer / 11)
+// Mode 3 rainbow, top to bottom: one colour per matrix row (row = LED index / 11)
 const byte ROW_COLORS[11][3] = {
   {255, 0, 0},
   {186, 69, 0},
@@ -36,7 +36,8 @@ const byte ROW_COLORS[11][3] = {
   {180, 0, 75}
 };
 
-void ColorLEDCycle(byte pos) { // pos = LED-Nummer, fuer den zeilenweisen Regenbogen (Modus 3)
+// Colour for LED pos: mode 2 steps the colour per LED, mode 3 uses the colour of its row
+void ColorLEDCycle(byte pos) {
   if (enableColorCycle == 2) {
     if (R > 0 && B == 0) {
       R = R - 64;
@@ -77,7 +78,7 @@ void ColorLEDCycle(byte pos) { // pos = LED-Nummer, fuer den zeilenweisen Regenb
     }
   }
   
-  else if (enableColorCycle == 3) { // Regenbogen von oben nach unten: eine Farbe pro Zeile (11 LEDs)
+  else if (enableColorCycle == 3) {
     if (pos <= 120) {
       R = ROW_COLORS[pos / 11][0];
       G = ROW_COLORS[pos / 11][1];
@@ -88,12 +89,12 @@ void ColorLEDCycle(byte pos) { // pos = LED-Nummer, fuer den zeilenweisen Regenb
 
 void LED_Routine() {
   if (minute != lastminute || update_leds == true) {
-    FastLED.clear(); // alle LEDs ausschalten
+    FastLED.clear();
     update_leds = false;
-    lupdate_leds = true; // for serial debugging
-    int modMinute = minute % 5; // Mithilfe des Modulos den "Überhang" berechnen. (46 -> 1, 28 -> 3, 19 -> 4)
-    int cMinute = minute - modMinute; // Den Überhang abziehen von der realen Minutenzahl, so kommt immer die fünf'er Minute raus
-    // Stundenausgabe
+    lupdate_leds = true; // Only for the debug output
+    int modMinute = minute % 5; // 0-4 extra minutes, shown by the corner LEDs
+    int cMinute = minute - modMinute;
+    // From :25 on, the next hour is shown ("FUENF VOR HALB ZWEI" at 1:25)
     int cStunde = stunde;
     if (minute >= 25) {
       if (stunde == 0 || stunde == 12 || stunde == 24) {
@@ -104,14 +105,13 @@ void LED_Routine() {
       }
     }
     if (enableColorCycle == 1 && minute != lastminute) {
-      ColorCycle(); // ein Schritt pro Minute: Neuzeichnen nach einem Befehl schiebt den Farbwechsel nicht weiter
+      ColorCycle(); // One step per minute; a redraw after a command does not advance the cycle
     }
     if (enableColorCycle == 2) {
       R = 255;
       G = 0;
       B = 0;
     }
-    // Minutenausgabe
     ESIST();
     if (cMinute == 5 || cMinute == 25 || cMinute == 35 || cMinute == 55) {
       FUENF();
@@ -135,9 +135,8 @@ void LED_Routine() {
       HALB();
     }
 
-    // Stunden
     if (cStunde % 12 == 1 && cMinute == 0) {
-      EIN(); // "ES IST EIN UHR"
+      EIN(); // "EIN UHR", not "EINS UHR"
     }
     else {
       HOUR(cStunde); // 0/12/24 -> ZWOELF, 1/13 -> EINS, ...
@@ -145,18 +144,17 @@ void LED_Routine() {
     if (cMinute == 0) {
       UHR();
     }
-    //Rand-LED-Anzeige
     if (modMinute == 1) {
-      RAND1(); //Rand-LED Nr. 1
+      RAND1();
     }
     else if (modMinute == 2) {
-      RAND2(); //Rand-LED Nr. 2
+      RAND2();
     }
     else if (modMinute == 3) {
-      RAND3(); //Rand-LED Nr. 3
+      RAND3();
     }
     else if (modMinute == 4) {
-      RAND4(); //Rand-LED Nr. 4
+      RAND4();
     }
     FastLED.show();
     lastminute = minute;

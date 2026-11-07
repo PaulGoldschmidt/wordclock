@@ -1,4 +1,4 @@
-# Veroeffentlicht web/ auf GitHub Pages (Einstellungen -> Pages -> Source: "GitHub Actions")
+# Deploys web/ to GitHub Pages. Needs Settings > Pages > Source set to "GitHub Actions".
 name: Pages
 
 on:

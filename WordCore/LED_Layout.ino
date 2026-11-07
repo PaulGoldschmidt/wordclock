@@ -1,5 +1,5 @@
-// Ein Wort = zusammenhaengender LED-Bereich. Die Zeilen sind abwechselnd verdrahtet (Serpentine):
-// bei from > to laeuft das Wort rueckwaerts. Die Reihenfolge ist wichtig fuer den Farbverlauf (Modus 2).
+// Lights one word, a contiguous LED range from its first to its last letter. Rows are wired as a
+// serpentine, so on right-to-left rows from > to. The order matters for the gradient in mode 2.
 void lightWord(byte from, byte to) {
   byte k = from;
   while (true) {
@@ -17,7 +17,7 @@ void lightWord(byte from, byte to) {
   }
 }
 
-void ESIST() { // "ES IST": der erste Buchstabe bekommt im Modus 2 noch keinen Farbschritt
+void ESIST() { // "ES IST"; in mode 2 the first letter keeps the start colour (no colour step)
   const byte letters[] = {0, 1, 3, 4, 5};
   for (byte k = 0; k < 5; k++) {
     if (k > 0 || enableColorCycle == 3) {
@@ -35,9 +35,9 @@ void NACH()    { lightWord(36, 33); }
 void VOR()     { lightWord(39, 37); }
 void HALB()    { lightWord(44, 47); }
 void UHR()     { lightWord(118, 120); }
-void EIN()     { lightWord(86, 84); } // "EIN" (fuer "ES IST EIN UHR"), EINS ohne S
+void EIN()     { lightWord(86, 84); } // "EIN" as in "ES IST EIN UHR": EINS without the S
 
-// Stundenwoerter {erste LED, letzte LED}, Index = Stunde % 12
+// Hour words {first LED, last LED}, indexed by hour % 12
 const byte HOUR_WORDS[12][2] = {
   {66, 70},   // ZWOELF
   {86, 83},   // EINS

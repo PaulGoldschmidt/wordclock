@@ -1,10 +1,10 @@
-// Die Frontplatte als SVG: echte Buchstabenumrisse aus der Druckvorlage, beleuchtet mit den LED-Farben.
+// The front plate as SVG: the real letter outlines from the print file, lit with the LED colours.
 import { PLATE } from './plate-data.js';
 import { cellLed, CORNER_LEDS } from './wordclock.js';
 
 const NS = 'http://www.w3.org/2000/svg';
 const UNLIT = '#3a3435';
-const CORNER_ORDER = ['tl', 'tr', 'br', 'bl']; // Reihenfolge der Punkte im PDF
+const CORNER_ORDER = ['tl', 'tr', 'br', 'bl']; // order of PLATE.dots, as in the print file
 
 function el(name, attrs = {}, parent) {
   const e = document.createElementNS(NS, name);
@@ -14,7 +14,7 @@ function el(name, attrs = {}, parent) {
 }
 
 export const rgb = ([r, g, b]) => `rgb(${r},${g},${b})`;
-// LED hinter Diffusor: Mitte heller als die Farbe
+// An LED behind a diffuser: the centre looks lighter than the colour
 const core = ([r, g, b], k) => rgb([r, g, b].map((v) => Math.round(v + (255 - v) * k)));
 
 export class Plate {
@@ -36,7 +36,7 @@ export class Plate {
     const glowLayer = el('g', { filter: 'url(#p-glow)', class: 'p-glowl' }, svg);
     const letterLayer = el('g', {}, svg);
 
-    this.cells = new Map(); // LED-Nummer -> { path, glow, halo }
+    this.cells = new Map(); // LED index -> { path, glow, halo }
     const half = PLATE.pitch / 2;
     PLATE.letters.forEach((row, r) => row.forEach((d, c) => {
       const cx = PLATE.origin + c * PLATE.pitch;
@@ -56,7 +56,7 @@ export class Plate {
     });
   }
 
-  // leds: 125 x ([r,g,b] | null); level: 0..1 sichtbare Helligkeit
+  // leds: 125 x ([r,g,b] | null); level: perceived brightness 0..1
   set(leds, level = 1) {
     const lit = [];
     for (const [k, c] of this.cells) {
@@ -75,20 +75,20 @@ export class Plate {
         c.halo.style.fill = 'transparent';
       }
     }
-    // Mittlere Farbe fuer den Lichtschein an der "Wand" hinter der Platte
+    // Average colour for the glow on the "wall" behind the plate
     if (!lit.length) return null;
     const avg = [0, 1, 2].map((i) => Math.round(lit.reduce((s, v) => s + v[i], 0) / lit.length));
     return { color: avg, amount: Math.min(1, lit.length / 22) * level };
   }
 
-  // Buchstaben hervorheben (Hinweis beim Ueberfahren der Abschnitte), cells = [[row, col], ...]
+  // Highlights letters while a settings section is hovered or focused; cells = [[row, col], ...]
   hint(cells) {
     const want = new Set(cells.map(([r, c]) => cellLed(r, c)));
     for (const [k, c] of this.cells) c.path.classList.toggle('p-hint', want.has(k));
   }
 }
 
-// Kleine Punkt-Ansicht fuer die Farbmodus-Kacheln
+// Small dot-matrix view for the colour mode tiles
 export function miniPlate(svg, leds) {
   svg.setAttribute('viewBox', '0 0 130 130');
   svg.replaceChildren();

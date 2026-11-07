@@ -5,7 +5,7 @@ import { Plate, miniPlate, rgb } from './plate.js';
 const $ = (id) => document.getElementById(id);
 const plate = new Plate($('plate'));
 
-// USB-Seriell-Wandler der ueblichen Arduino Nano / Pro Mini (Original, CH340, FTDI, CP210x, Prolific)
+// USB vendor IDs of the serial chips on common Arduino Nano / Pro Mini boards (Arduino, CH340, FTDI, CP210x, Prolific)
 const USB_FILTERS = [0x2341, 0x2a03, 0x1a86, 0x0403, 0x10c4, 0x067b].map((usbVendorId) => ({ usbVendorId }));
 
 const SWATCHES = [
@@ -29,7 +29,7 @@ const MODE_NOTES = [
   'Ein Regenbogen von oben nach unten, eine Farbe pro Zeile.',
 ];
 
-// Einstellungen der Uhr, wie sie in ui.draft und ui.known stehen
+// Setting keys as used in ui.draft and ui.known
 const BRIGHT_KEYS = ['dayMin', 'dayMax', 'nightMin', 'nightMax', 'nightBegin', 'nightEnd'];
 const SLIDERS = ['dayMin', 'dayMax', 'nightMin', 'nightMax', 'ldr'];
 const SETTINGS = [...BRIGHT_KEYS, 'ldr', 'timechange', 'mode'];
@@ -41,18 +41,18 @@ const hms = (f) => `${hm(f.h, f.mi)}:${two(f.s)}`;
 const ui = {
   core: null,
   state: 'closed',
-  draft: clone(FACTORY), // was in der Oberflaeche eingestellt ist
-  known: null, // was die Uhr gespeichert hat; einzelne Werte null = nicht auslesbar
-  scrubMin: null, // Uhrzeit der Vorschau in Minuten, null = jetzt
+  draft: clone(FACTORY), // settings as edited in the UI
+  known: null, // settings stored on the clock; a null value could not be read
+  scrubMin: null, // preview time in minutes since midnight, null = live
   room: 'hell',
-  overlay: null, // Statusbild der Uhr: { kind, start }
+  overlay: null, // status display the clock is showing: { kind, start }
   timeMsg: null, // { text, cls, until }
 };
 
 const usable = () => Boolean(ui.core) && (ui.state === 'ready' || ui.state === 'limited');
 const busy = () => Boolean(ui.core?.busy);
 const nightAt = (h) => isNight(h, ui.draft.nightBegin, ui.draft.nightEnd, ui.core?.legacy);
-// Uhrzeit, die die Uhr zeigen sollte: mit Sommerzeit deutsche Ortszeit, sonst immer MEZ
+// Time the clock should show: German local time with DST switching on, otherwise CET all year
 const wallFields = () => (ui.draft.timechange ? berlinFields : cetFields)(Date.now());
 const clockDst = () => ui.known?.timechange ?? ui.draft.timechange;
 
@@ -60,8 +60,7 @@ let model = new WordClockModel(ui.draft.color, ui.draft.mode);
 let frameCache = { key: '', leds: null };
 let lastPlateKey = '';
 
-// ---------- Vorschau ----------
-// Farbe oder Modus geaendert
+// ---------- Preview ----------
 function modelChanged() {
   model = new WordClockModel(ui.draft.color, ui.draft.mode);
   frameCache.key = '';
@@ -84,8 +83,8 @@ function previewBrightness(h) {
 
 const visual = (b) => (b <= 0 ? 0 : 0.18 + 0.82 * Math.sqrt(Math.min(255, b) / 255));
 
-// Statusbilder, die die echte Uhr gerade zeigt (effects.ino), mit Bildunterschrift.
-// smooth: weich ueberblenden; sonst schaltet die Vorschau hart um wie die Uhr.
+// Status displays the real clock is showing right now (effects.ino), with a caption.
+// smooth: cross-fade; otherwise the preview switches instantly, like the clock.
 function overlayFrame(t) {
   const o = ui.overlay;
   if (o) {
@@ -106,7 +105,7 @@ function overlayFrame(t) {
       default: break;
     }
   }
-  if (ui.state === 'setup') { // LED-Test einer neuen Uhr: rot, gruen, blau, weiss, Logo
+  if (ui.state === 'setup') { // LED test a new clock loops until it is set up: red, green, blue, white, logo
     const step = Math.floor(t / 1000) % 5;
     const caption = 'Neue Uhr: sie testet ihre LEDs und wartet auf die Uhrzeit';
     return step < 4
@@ -235,19 +234,19 @@ function updateMinis() {
   document.querySelectorAll('.mode').forEach((btn) => {
     const mode = Number(btn.dataset.mode);
     const svg = btn.querySelector('svg');
-    // Die Farbmodi beginnen immer bei Rot: nur "Eine Farbe" haengt von der gewaehlten Farbe ab
+    // The colour-cycling modes always start at red, so only mode 0 depends on the chosen colour
     if (mode === 0 || !svg.childNodes.length) {
-      miniPlate(svg, new WordClockModel(ui.draft.color, mode).render(10, 23)); // ES IST ZWANZIG NACH ZEHN + 3 Punkte
+      miniPlate(svg, new WordClockModel(ui.draft.color, mode).render(10, 23)); // ES IST ZWANZIG NACH ZEHN + 3 dots
     }
     btn.setAttribute('aria-checked', String(mode === ui.draft.mode));
   });
-  // Akzentfarbe der Seite = Farbe der Uhr (fuer dunkle Farben aufgehellt)
+  // Page accent colour = clock colour, scaled to full brightness so dark colours stay visible
   const c = ui.draft.mode === 0 ? ui.draft.color : [255, 120, 60];
   const max = Math.max(...c, 1);
   document.documentElement.style.setProperty('--led', rgb(c.map((v) => Math.round((v * 255) / max))));
 }
 
-// ---------- Bedienelemente ----------
+// ---------- Controls ----------
 function setFill(input) {
   const pct = ((input.value - input.min) / (input.max - input.min)) * 100;
   input.style.setProperty('--fill', `${pct}%`);
@@ -324,7 +323,7 @@ function buildControls() {
     ui.draft.mode = Number(btn.dataset.mode);
     modelChanged();
   }));
-  // Min/Max-Paare: das Minimum darf nicht ueber dem Maximum liegen
+  // Min/max pairs: moving one slider drags the other along so that min never exceeds max
   const pairs = { dayMin: 'dayMax', dayMax: 'dayMin', nightMin: 'nightMax', nightMax: 'nightMin' };
   for (const id of SLIDERS) {
     $(id).addEventListener('input', (e) => {
@@ -334,7 +333,7 @@ function buildControls() {
       if (other) {
         if (id.endsWith('Min') && ui.draft[other] < v) ui.draft[other] = v;
         if (id.endsWith('Max') && ui.draft[other] > v) ui.draft[other] = v;
-        // Vorschau zeigt den Wert, der gerade bewegt wird: Min = dunkler Raum, Nacht = eine Nachtstunde
+        // Make the preview show the value being dragged: min = dark room, night = jump to a night hour
         ui.room = id.endsWith('Min') ? 'dunkel' : 'hell';
         const wantNight = id.startsWith('night');
         if (wantNight !== nightAt(displayTime().h)) {
@@ -353,7 +352,7 @@ function buildControls() {
   $('liveBtn').addEventListener('click', () => previewAt(null));
   document.querySelectorAll('.seg button').forEach((b) => b.addEventListener('click', () => { ui.room = b.dataset.room; syncRoom(); }));
 
-  // Abschnitte heben ihre Woerter auf der Platte hervor (UHR, TAG, NACHT)
+  // Hovering or focusing a section highlights its word on the plate (UHR, TAG, NACHT)
   document.querySelectorAll('[data-words]').forEach((elm) => {
     const cells = elm.dataset.words.split(' ').map((x) => x.split('/').map(Number));
     const on = () => plate.hint(cells);
@@ -365,7 +364,7 @@ function buildControls() {
   });
 }
 
-// Vorschau auf eine Uhrzeit (Minuten) stellen, null = jetzt
+// minutes: preview time in minutes since midnight, null = live
 function previewAt(minutes) {
   ui.scrubMin = minutes;
   render();
@@ -375,7 +374,7 @@ function syncRoom() {
   document.querySelectorAll('.seg button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.room === ui.room)));
 }
 
-// ---------- Verbindung ----------
+// ---------- Connection ----------
 let bannerId = 0;
 function banner(html, kind = 'info', actions = []) {
   const b = $('banner');
@@ -393,7 +392,7 @@ function banner(html, kind = 'info', actions = []) {
   return ++bannerId;
 }
 
-// id: nur diesen Hinweis ausblenden, falls er noch angezeigt wird
+// With an id from banner(), hides that banner only if no newer one has replaced it
 function hideBanner(id = bannerId) {
   if (id === bannerId) $('banner').hidden = true;
 }
@@ -437,10 +436,10 @@ function updateButtons() {
 
 function loadFromClock(s) {
   const d = clone(ui.draft);
-  for (const k of SETTINGS) d[k] = s[k] ?? FACTORY[k]; // nicht auslesbar (6.1: Nacht-Helligkeit): Werkseinstellung zeigen
-  if (s.color) d.color = [...s.color]; // null: 6.1 in einem Farbwechsel-Modus, die feste Farbe ist nicht auslesbar
+  for (const k of SETTINGS) d[k] = s[k] ?? FACTORY[k]; // unreadable values (6.1: night brightness) show the factory default
+  if (s.color) d.color = [...s.color]; // null on 6.1 in a colour-cycling mode: the fixed colour cannot be read
   ui.known = clone(d);
-  for (const k of SETTINGS) ui.known[k] = s[k] ?? null; // unbekannt: "Uebernehmen" bleibt markiert
+  for (const k of SETTINGS) ui.known[k] = s[k] ?? null; // unknown values keep the apply button marked as unsent
   ui.draft = d;
   $('infoNr').textContent = s.number ?? '–';
   $('infoFw').textContent = ui.core.legacy ? '6.1 (Original)' : ui.core.firmware;
@@ -448,10 +447,10 @@ function loadFromClock(s) {
   const hours = s.runtime * 12;
   $('infoRuntime').textContent = hours >= 48 ? `${Math.round(hours / 24).toLocaleString('de-DE')} Tage` : `${hours} h`;
   modelChanged();
-  renderConn(); // Uhrnummer im Kopf
+  renderConn(); // clock number in the header
 }
 
-// Nach erfolgreichem Senden: die Uhr hat jetzt diese Werte aus dem Entwurf
+// After a successful send the clock holds these draft values
 function markSent(keys) {
   if (ui.known) for (const k of keys) ui.known[k] = structuredClone(ui.draft[k]);
   updateDirty();
@@ -534,7 +533,6 @@ async function chooseAndConnect(all = false) {
   connect(port);
 }
 
-// Befehl mit Rueckmeldung ausfuehren
 async function run(fn) {
   try {
     return await fn();
@@ -608,8 +606,8 @@ function bindActions() {
   window.addEventListener('pagehide', () => { ui.core?.close(); });
 }
 
-// ---------- Konsole ----------
-// Zeilen gesammelt einfuegen: beim Start kommen viele auf einmal
+// ---------- Console ----------
+// Log lines are added in batches because the clock prints many at once when it starts
 const LOG_MAX = 400;
 const logQueue = [];
 function logLine({ text, dir }) {

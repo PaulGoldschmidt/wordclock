@@ -39,7 +39,7 @@ a { color: var(--led); text-underline-offset: 3px; }
 
 button, input, select { font: inherit; color: inherit; }
 
-/* ---------- Kopf ---------- */
+/* ---------- Header ---------- */
 .top {
   position: sticky;
   top: 0;
@@ -92,7 +92,7 @@ button, input, select { font: inherit; color: inherit; }
 
 @keyframes pulse { 50% { opacity: 0.25; } }
 
-/* ---------- Knoepfe ---------- */
+/* ---------- Buttons ---------- */
 .btn {
   appearance: none;
   border: 1px solid var(--line);
@@ -155,7 +155,7 @@ button, input, select { font: inherit; color: inherit; }
 
 .chip[aria-pressed="true"] { color: var(--ink); border-color: color-mix(in srgb, var(--led) 60%, transparent); }
 
-/* ---------- Hinweisleiste ---------- */
+/* ---------- Banner ---------- */
 .banner {
   margin: 16px clamp(16px, 4vw, 40px) 0;
   padding: 12px 16px;
@@ -168,7 +168,7 @@ button, input, select { font: inherit; color: inherit; }
 
 .banner.is-error { border-color: #6b3029; background: #2a1613; color: #ffc4bb; }
 
-/* ---------- Aufbau ---------- */
+/* ---------- Layout ---------- */
 .layout {
   display: grid;
   grid-template-columns: minmax(0, 1.08fr) minmax(340px, 0.92fr);
@@ -192,7 +192,7 @@ button, input, select { font: inherit; color: inherit; }
   isolation: isolate;
 }
 
-/* Lichtschein der Uhr an der Wand */
+/* Glow of the clock on the wall behind it */
 .wall::before {
   content: "";
   position: absolute;
@@ -217,7 +217,7 @@ button, input, select { font: inherit; color: inherit; }
 .p-letter { transition: fill 0.45s ease; }
 .p-glowl path, .p-glowl circle, .p-halo circle { transition: fill 0.45s ease, opacity 0.45s ease; }
 .p-letter.p-hint { fill: #8a8183; }
-.plate.is-instant * { transition: none; } /* Statusbilder schalten hart um, wie an der Uhr */
+.plate.is-instant * { transition: none; } /* status displays switch instantly, like on the clock */
 
 .caption {
   margin: 18px 0 8px;
@@ -258,7 +258,7 @@ button, input, select { font: inherit; color: inherit; }
 
 .seg button[aria-pressed="true"] { background: #2a2425; color: var(--ink); }
 
-/* ---------- Regler ---------- */
+/* ---------- Sliders ---------- */
 input[type="range"] {
   -webkit-appearance: none;
   appearance: none;
@@ -300,7 +300,7 @@ input[type="range"]::-moz-range-thumb {
 input[type="range"]:focus-visible { outline: none; }
 input[type="range"]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px var(--led); }
 
-/* ---------- Karten ---------- */
+/* ---------- Cards ---------- */
 .panel { display: grid; gap: 18px; align-content: start; }
 
 .card {
@@ -339,7 +339,7 @@ input[type="range"]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px 
 
 .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
 
-/* Zeit */
+/* Time */
 .times { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
 .lbl, .info dt, .bcol legend {
@@ -413,7 +413,7 @@ input[type="datetime-local"], select, .console input {
 .switch input:checked + .track::after { transform: translateX(16px); background: #fff; }
 .switch input:focus-visible + .track { outline: 2px solid var(--led); outline-offset: 2px; }
 
-/* Farbe */
+/* Colour */
 .modes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
 
 .mode {
@@ -486,7 +486,7 @@ input[type="datetime-local"], select, .console input {
 .picker input[type="color"]::-webkit-color-swatch { border: 0; border-radius: 50%; }
 .picker input[type="color"]::-moz-color-swatch { border: 0; border-radius: 50%; }
 
-/* Helligkeit */
+/* Brightness */
 .bgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 22px; margin-top: 14px; }
 
 .bcol { border: 0; margin: 0; padding: 0; min-width: 0; }
@@ -527,7 +527,7 @@ input[type="datetime-local"], select, .console input {
   color: var(--ink);
 }
 
-/* Uhr / Info */
+/* Clock info */
 .info { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 0; }
 .info div { min-width: 0; }
 .info dd { margin: 2px 0 0; font-size: 18px; font-variant-numeric: tabular-nums; }
@@ -572,7 +572,7 @@ input[type="datetime-local"], select, .console input {
 .foot a { color: var(--mute); text-decoration: none; }
 .foot a:hover, .foot a:focus-visible { color: var(--ink); text-decoration: underline; }
 
-/* ---------- schmale Bildschirme ---------- */
+/* ---------- Narrow screens ---------- */
 @media (max-width: 980px) {
   .layout { grid-template-columns: 1fr; }
   .stage { position: static; }

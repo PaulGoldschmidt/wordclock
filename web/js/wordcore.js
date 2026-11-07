@@ -1,38 +1,38 @@
-// Verbindung zur Uhr ueber Web Serial: Handshake, Befehle und Auswertung der Ausgaben der Firmware.
-// Funktioniert mit der Original-Firmware (6.1) und mit 6.2. Kein DOM-Zugriff, damit das Modul auch
-// ausserhalb des Browsers (Tests) laeuft.
+// Web Serial connection to the clock: handshake, commands and parsing of the firmware's output.
+// Works with the original firmware (6.1) and with 6.2. No DOM access, so the module also runs
+// outside the browser (tests).
 //
-// Das Protokoll der Firmware (WordCore/communication_selfcheck.ino):
-//  - Beim Oeffnen des Ports startet der Arduino neu. Kommt waehrend setup() ein Byte an, ueberspringt
-//    die Uhr die Startanimation, begrenzt die Helligkeit und schreibt Debug-Ausgaben ("PC-Modus").
-//  - Ein Befehl wird erst gelesen, wenn mindestens 13 Zeichen im Puffer liegen; danach liest die Uhr
-//    bis 2,5 s lang nichts mehr kommt. Zwei Befehle duerfen also nie direkt hintereinander kommen.
-//    Ein Zeichen, das waehrend des Lesens ankommt, verlaengert es: darauf beruht das genaue Stellen der Zeit.
-//  - Im PC-Modus meldet jeder loop()-Durchlauf "Warte auf neue Befehle..." direkt vor dieser Pruefung.
+// Firmware protocol (WordCore/communication_selfcheck.ino):
+//  - Opening the port resets the Arduino. If a byte arrives during setup(), the clock skips the startup
+//    animation, limits the brightness and prints debug output ("PC mode").
+//  - A command is only read once at least 13 bytes are buffered; the clock then reads until nothing
+//    has arrived for 2.5 s. Two commands must therefore never be sent back to back.
+//    Every byte that arrives during the read extends it; precise time setting relies on this.
+//  - In PC mode every loop() pass prints "Warte auf neue Befehle..." right before this check.
 
 const BAUD = 115200;
 const HELLO = 'PC2ARDUINO';
-const READ_TIMEOUT = 2500; // Serial.setTimeout() der Firmware fuer Befehle
+const READ_TIMEOUT = 2500; // firmware's Serial.setTimeout() for commands, ms
 const CMD_LEN = 13;
 
-// Uhrzeit stellen (setTime)
-const SET_LAG = READ_TIMEOUT + 100; // letztes Zeichen -> RTC geschrieben: Ende von readString(), dann delay(100)
-const ECHO_LAG = 2; // die Echo-Zeile ist gut 1 ms nach dem Schreiben des RTC fertig gesendet, dazu USB
-const MAX_GAP = READ_TIMEOUT - 300; // groesster sicherer Abstand zweier Zeichen, solange die Uhr liest
-const KEEP_GAP = 1500; // Abstand der Fuellzeichen, die das Lesen offen halten
-const AIM_AFTER_READ = 1300; // PC-Modus: geplanter Abstand Lesebeginn -> letztes Zeichen (verpasst: siehe retry)
-const AIM_BLIND = 2600; // ohne Debug-Ausgabe: Befehl -> letztes Zeichen (gelesen wird innerhalb einer loop()-Runde)
+// Timing for setTime(), in ms
+const SET_LAG = READ_TIMEOUT + 100; // last byte received -> RTC written: readString() timeout, then delay(100)
+const ECHO_LAG = 2; // the echo line is fully sent just over 1 ms after the RTC write, plus USB latency
+const MAX_GAP = READ_TIMEOUT - 300; // largest safe gap between two bytes while the clock is reading
+const KEEP_GAP = 1500; // interval of the filler '_' bytes that keep the read open
+const AIM_AFTER_READ = 1300; // PC mode: planned time from read start to last byte (if missed, see retry in setTime)
+const AIM_BLIND = 2600; // no debug output: command sent -> last byte (the clock starts reading within one loop() pass)
 const WARTE = 'Warte auf neue Befehle';
 const STATUS_END = 'STATUS END';
 const encoder = new TextEncoder();
 
-// Startmeldungen, deren Zeitpunkt in _seen festgehalten wird (6.1 nennt sich noch Lichtbild / LightPicture)
+// Startup messages whose arrival time is recorded in _seen (6.1 calls itself Lichtbild / LightPicture)
 const MARKERS = [
   ['banner', /^--(Wordclock|Lichtbild) Startvorgang--/], ['springe', /^Springe Startup-Animation/], ['hi', /^HI$/],
   ['hello', /^Hello World - this is (Wordclock|LightPicture)/], ['eeprom', /^EEPROM ausgelesen/],
 ];
 
-// Werte aus der Startausgabe, die 6.1 im Status nicht oder falsch meldet
+// Startup output values that 6.1 omits from the status or reports wrongly
 const BOOT_KEYS = { Nummer: 'number', 'Tag max. Helligkeit': 'dayMax', 'Tag min. Helligkeit': 'dayMin', 'LDR-Teiler': 'ldr' };
 
 export const now = () => performance.now();
@@ -42,9 +42,8 @@ const pad = (cmd) => cmd.padEnd(CMD_LEN, '_');
 export const two = (n) => String(n).padStart(2, '0');
 const three = (n) => String(n).padStart(3, '0');
 
-// ---- Zeit ----------------------------------------------------------------------------------------
-// Die Uhr erwartet im RTC immer Winterzeit (MEZ = UTC+1) und stellt selbst auf Sommerzeit um.
-// Ist die automatische Umstellung aus, bekommt sie die deutsche Ortszeit.
+// With automatic DST switching on, the clock expects standard time (CET = UTC+1) in the RTC and
+// switches to summer time itself. With switching off, it gets German local time.
 const berlinFmt = new Intl.DateTimeFormat('de-DE', {
   timeZone: 'Europe/Berlin', year: 'numeric', month: 'numeric', day: 'numeric',
   hour: 'numeric', minute: 'numeric', second: 'numeric', hourCycle: 'h23',
@@ -63,12 +62,12 @@ function utcFields(ms) {
   };
 }
 
-// Umkehrung von utcFields: Felder als UTC gelesen -> ms
+// Inverse of utcFields: fields interpreted as UTC -> ms
 export const fieldsToMs = (f) => Date.UTC(f.y, f.mo - 1, f.d, f.h, f.mi, f.s);
 
 export const cetFields = (ms) => utcFields(ms + 3600e3);
 
-// Deutsche Ortszeit (z.B. aus einem Eingabefeld) -> Zeitpunkt in ms
+// German local time (e.g. from an input field) -> timestamp in ms
 export function berlinToMs(y, mo, d, h, mi, s = 0) {
   const guess = fieldsToMs({ y, mo, d, h, mi, s });
   for (const off of [1, 2]) {
@@ -76,13 +75,12 @@ export function berlinToMs(y, mo, d, h, mi, s = 0) {
     const f = berlinFields(ms);
     if (f.y === y && f.mo === mo && f.d === d && f.h === h && f.mi === mi) return ms;
   }
-  return guess - 3600e3; // Uhrzeit faellt in die Luecke der Umstellung
+  return guess - 3600e3; // nonexistent local time (spring-forward gap)
 }
 
-// Jahre, die die Uhr kennt (RTC_Module.ino)
+// Years the firmware accepts as a valid RTC time (RTC_Check in RTC_Module.ino)
 const validYear = (y) => y >= 2016 && y <= 2099;
 
-// ---- Befehle ---------------------------------------------------------------------------------------
 export const commands = {
   time: (f) => `@${two(f.y % 100)}${two(f.mo)}${two(f.d)}${two(f.h)}${two(f.mi)}${two(f.s)}`,
   color: ([r, g, b]) => `#/${three(r)}${three(g)}${three(b)}`,
@@ -95,19 +93,18 @@ export const commands = {
   factoryReset: () => '*',
 };
 
-// ---- Verbindung --------------------------------------------------------------------------------------
 export class WordCore extends EventTarget {
   constructor(port) {
     super();
     this.port = port;
     this.state = 'closed'; // closed | connecting | setup | ready | limited
     this.firmware = null; // '6.1' | '6.2' | ...
-    this.legacy = false; // Original-Firmware 6.1: ohne Zusatzzeilen im Status, andere Nachtlogik
-    this.boot = {}; // Werte aus der Startausgabe
-    this.status = null; // Antwort auf '&'
-    this.telemetry = {}; // Debug-Ausgabe jedes loop()-Durchlaufs
+    this.legacy = false; // original firmware 6.1: no extra status lines, different night logic
+    this.boot = {}; // values from the startup output
+    this.status = null; // parsed reply to '&'
+    this.telemetry = {}; // values from the debug output of each loop() pass
     this.rtcError = false;
-    this.busy = false; // ein Befehl laeuft
+    this.busy = false;
     this.busyLabel = null;
     this._waiters = new Set();
     this._queue = Promise.resolve();
@@ -115,29 +112,28 @@ export class WordCore extends EventTarget {
     this._statusLines = null;
     this._lastLoopLine = 0;
     this._lastWarte = 0;
-    this._seen = {}; // Zeitpunkt der letzten Startmeldungen (Banner, PC-Modus, ...)
-    this._writeLag = SET_LAG + 3; // letztes Zeichen gesendet -> RTC geschrieben, wird beim Stellen nachgemessen
+    this._seen = {}; // MARKERS key -> time (now()) it was last seen
+    this._writeLag = SET_LAG + 3; // last byte sent -> RTC written, ms; re-measured on every time set
   }
 
-  // Uhrzeit der Uhr, zwischen den Debug-Zeilen hochgezaehlt (null, solange unbekannt oder ungueltig)
+  // The clock's time, extrapolated from the latest debug line (null while unknown or invalid)
   get clock() {
     const c = this.telemetry.clock;
     if (!c || this.rtcError) return null;
     return utcFields(fieldsToMs(c) + (Date.now() - c.at));
   }
 
-  // ---------- Ereignisse ----------
   _emit(type, detail) { this.dispatchEvent(new CustomEvent(type, { detail })); }
   _setState(s) {
     if (this.state === s) return;
     this.state = s;
-    this._warteTimes = []; // Takt der Uhr je Zustand neu messen (LED-Test laeuft anders als loop())
+    this._warteTimes = []; // re-measure the loop period per state (the LED test cycles differently from loop())
     this._lastWarte = 0;
     this._emit('state', s);
   }
   _log(text, dir = 'info') { this._emit('log', { text, dir }); }
 
-  // Wartet auf die erste Zeile (ab jetzt), fuer die test(line, t) etwas anderes als undefined liefert.
+  // Resolves with the first non-undefined result of test(line, t) for lines arriving from now on.
   waitFor(test, timeout, what = 'Antwort') {
     return new Promise((resolve, reject) => {
       const w = { test, resolve, reject };
@@ -146,15 +142,15 @@ export class WordCore extends EventTarget {
     });
   }
 
-  // Wie waitFor, aber auch erfuellt, wenn eine der Meldungen seit `since` schon kam. Noetig, weil mehrere
-  // Zeilen im selben USB-Paket ankommen und synchron verarbeitet werden.
+  // Like waitFor, but also resolves if one of the markers already arrived since `since`. Needed because
+  // several lines can arrive in the same USB packet and are processed synchronously.
   waitSeen(keys, since, timeout, what) {
     const hit = () => keys.find((k) => this._seen[k] >= since);
     const h = hit();
     return h ? Promise.resolve(h) : this.waitFor(() => hit(), timeout, what);
   }
 
-  // Zeitpunkt der naechsten "Warte"-Zeile nach `after`: kurz danach prueft die Uhr auf neue Befehle
+  // Time of the next "Warte" line after `after`; the clock checks for a command right after printing it
   _nextWarte(after = 0) {
     return this.waitFor((l, t) => (l.startsWith(WARTE) && t > after ? t : undefined), 9000, 'Reaktion');
   }
@@ -164,7 +160,6 @@ export class WordCore extends EventTarget {
     this._waiters.clear();
   }
 
-  // ---------- Port ----------
   async open() {
     this._setState('connecting');
     this._closing = false;
@@ -178,16 +173,16 @@ export class WordCore extends EventTarget {
     }
   }
 
-  // restart: die Uhr vor dem Trennen neu starten, damit sie ohne PC-Modus (volle Helligkeit) weiterlaeuft
+  // restart: reset the clock before disconnecting so it runs on without PC mode (full brightness)
   async close(restart = true) {
     if (this.state === 'closed' && !this.port.readable) return;
     this._closing = true;
     if (restart && this.port.writable) {
-      try { await this._resetBoard(); } catch { /* Port evtl. schon weg */ }
+      try { await this._resetBoard(); } catch { /* port may already be gone */ }
     }
-    try { await this._reader?.cancel(); } catch { /* egal */ }
+    try { await this._reader?.cancel(); } catch { /* ignore */ }
     await this._readDone;
-    try { await this.port.close(); } catch { /* egal */ }
+    try { await this.port.close(); } catch { /* ignore */ }
     this._failWaiters(new Error('Verbindung getrennt'));
     this._setState('closed');
   }
@@ -219,7 +214,7 @@ export class WordCore extends EventTarget {
               buf = buf.slice(i + 1);
               this._onLine(line);
             }
-            if (buf.length > 4096) buf = buf.slice(-1024); // Datenmuell ohne Zeilenende
+            if (buf.length > 4096) buf = buf.slice(-1024); // discard garbage that has no line break
           }
         } catch (e) {
           if (!this._closing) this._log(`Lesefehler: ${e.message}`, 'error');
@@ -228,7 +223,7 @@ export class WordCore extends EventTarget {
           this._reader = null;
         }
       }
-      if (!this._closing) { // Kabel gezogen o.ae.
+      if (!this._closing) { // connection lost, e.g. cable unplugged
         this._failWaiters(new Error('Die Verbindung zur Uhr wurde unterbrochen'));
         this._setState('closed');
         this._emit('lost');
@@ -236,14 +231,13 @@ export class WordCore extends EventTarget {
     })();
   }
 
-  // Reset ueber DTR (wie die Arduino-IDE): Flanke "aus -> an" loest ueber den Kondensator den Reset aus.
+  // Reset via DTR like the Arduino IDE: the off -> on edge triggers the reset through the capacitor.
   async _resetBoard() {
     await this.port.setSignals({ dataTerminalReady: false, requestToSend: false });
     await sleep(120);
     await this.port.setSignals({ dataTerminalReady: true, requestToSend: true });
   }
 
-  // ---------- Handshake ----------
   async _handshake(retried = false) {
     this._setState('connecting');
     this.boot = {};
@@ -254,7 +248,7 @@ export class WordCore extends EventTarget {
     const t0 = now();
     await this._resetBoard();
 
-    // Bis zum Startbanner immer wieder "Hallo" senden: was waehrend des Bootloaders ankommt, geht verloren.
+    // Send HELLO repeatedly until the startup banner: bytes arriving while the bootloader runs are lost.
     let banner = null;
     const bannerP = this.waitSeen(['banner'], t0, 5000, 'Startmeldung').catch(() => null);
     bannerP.then((b) => { banner = b; });
@@ -267,15 +261,15 @@ export class WordCore extends EventTarget {
     const bannerAt = this._seen.banner;
 
     const result = await this.waitSeen(['springe', 'hello', 'hi'], bannerAt, 3000, 'Startmeldung').catch(() => 'timeout');
-    if (result === 'hello') { // neue Uhr: EEPROM leer, wartet auf die Uhrzeit
+    if (result === 'hello') { // new clock: EEPROM not initialised, waiting for the time
       this._setState('setup');
-      // Im LED-Test liest die Uhr erst ab 13 Zeichen: Reste der "Hallo"-Bytes bleiben sonst im Puffer
-      // und verderben den ersten Befehl. Ein Fuellbefehl schiebt sie als ungueltigen Befehl hinaus.
+      // In the LED test the clock only reads once 13 bytes are buffered, so leftover HELLO bytes would
+      // stay in the buffer and corrupt the first command. A filler command flushes them out as an invalid one.
       await this.command('', { label: 'Verbindung vorbereiten' });
       return undefined;
     }
     if (result !== 'springe') {
-      // Die Uhr hat das "Hallo" verpasst und spielt ihre Startanimation: einmal neu versuchen.
+      // The clock missed the HELLO and is playing its startup animation: retry once.
       if (!retried) {
         this._log('Die Uhr hat den Computer beim Start nicht erkannt, neuer Versuch …', 'info');
         return this._handshake(true);
@@ -286,15 +280,15 @@ export class WordCore extends EventTarget {
       return undefined;
     }
     await this.waitSeen(['hi'], bannerAt, 4000, 'Startmeldung');
-    this._lastLoopLine = now(); // Frist fuer die erste Debug-Zeile (RTC-Pruefung) beginnt jetzt
+    this._lastLoopLine = now(); // the deadline for the first debug line (RTC error detection) starts now
     this._setState('ready');
     await this.refreshStatus();
     return undefined;
   }
 
-  // Kein Startbanner: die Uhr wurde beim Verbinden nicht neu gestartet (z.B. ohne DTR-Leitung).
+  // No startup banner: the clock did not reset on connect (e.g. no DTR line).
   async _probeWithoutReset() {
-    await sleep(READ_TIMEOUT + 800); // die Uhr hat die "Hallo"-Bytes evtl. als Befehl gelesen
+    await sleep(READ_TIMEOUT + 800); // the clock may be reading the HELLO bytes as a command; let that read end
     this._setState('limited');
     try {
       await this.refreshStatus();
@@ -303,7 +297,6 @@ export class WordCore extends EventTarget {
     }
   }
 
-  // ---------- Zeilen der Firmware auswerten ----------
   _onLine(line) {
     const t = now();
     this._log(line, 'in');
@@ -320,11 +313,11 @@ export class WordCore extends EventTarget {
     } else if (line.endsWith('STATUS BEGIN')) {
       this._statusLines = [];
     } else if (line.startsWith(WARTE)) {
-      // Abstand zweier Durchlaeufe merken, aber nicht, wenn dazwischen ein Befehl gelesen wurde (>= 2,5 s)
+      // Record the loop period, but not across a command read (>= 2.5 s)
       const gap = t - this._lastWarte;
       if (this._lastWarte && gap > 900 && gap < 2300) this._warteTimes = [...this._warteTimes.slice(-7), gap];
       this._lastWarte = t;
-      // 6.2 zeigt bei RTC-Fehler keine Debug-Ausgabe: "Warte" ohne "Loop durchlaufen" = RTC-Fehler
+      // On an RTC error 6.2 prints no debug output: "Warte" without "Loop durchlaufen" means RTC error
       if (this.state === 'ready' && this._lastLoopLine && t - this._lastLoopLine > 6000 && !this.busy) this.rtcError = true;
     } else if ((m = line.match(/^Loop durchlaufen am (\d+)\.(\d+)\.(\d+) um (\d+):(\d+):(\d+)/))) {
       const [d, mo, y, h, mi, s] = m.slice(1).map(Number);
@@ -358,17 +351,17 @@ export class WordCore extends EventTarget {
     }
     if (nums.length < 13) return;
     const [dayMax, dayMin, nightMax, nightMin, nightBegin, nightEnd, r, g, b, mode, timechange, startups, runtime] = nums;
-    this.legacy = extra.VERSION === undefined; // 6.1 kennt die Zusatzzeilen noch nicht
+    this.legacy = extra.VERSION === undefined; // 6.1 sends no NAME=value lines
     this.firmware = extra.VERSION || '6.1';
     this.status = {
-      // 6.1 meldet in den Farbwechsel-Modi die zuletzt gezeichnete Farbe, ab 6.2 immer die gespeicherte feste Farbe
+      // In the colour cycle modes 6.1 reports the last drawn colour, 6.2 always the stored fixed colour
       dayMax, dayMin, nightMax, nightMin, nightBegin, nightEnd, color: this.legacy && mode !== 0 ? null : [r, g, b], mode, timechange,
       startups, runtime,
       ldr: extra.LDR !== undefined ? Number(extra.LDR) : this.boot.ldr,
       number: extra.NR !== undefined ? Number(extra.NR) : this.boot.number,
     };
-    // 6.1 meldet im PC-Modus die voruebergehend begrenzte Helligkeit (39/40) statt der gespeicherten.
-    // Die Tag-Werte stehen in der Startausgabe, die Nacht-Werte sind nicht auslesbar (null).
+    // In PC mode 6.1 reports the temporarily limited brightness (39/40) instead of the stored values.
+    // The day values come from the startup output; the night values cannot be read (null).
     if (this.legacy && this.state !== 'limited') {
       this.status.dayMax = this.boot.dayMax ?? null;
       this.status.dayMin = this.boot.dayMin ?? null;
@@ -378,7 +371,6 @@ export class WordCore extends EventTarget {
     this._emit('status', this.status);
   }
 
-  // ---------- Befehle ----------
   get loopPeriod() {
     const w = this._warteTimes;
     if (!w.length) return this.legacy ? 1800 : 1550;
@@ -387,7 +379,7 @@ export class WordCore extends EventTarget {
 
   get debugOutput() { return this.state === 'ready' || this.state === 'setup'; }
 
-  // Reiht einen Befehl ein. Er wird erst gesendet, wenn die Uhr den vorigen fertig gelesen hat.
+  // Queues a command. It is only sent once the clock has finished reading the previous one.
   command(cmd, { expect, timeout = 12000, label } = {}) {
     return this._enqueue(() => this._run(cmd, { expect, timeout, label }));
   }
@@ -404,9 +396,9 @@ export class WordCore extends EventTarget {
     this._emit('busy', busy);
   }
 
-  // beforeSend(): vor dem Senden (z.B. auf den richtigen Moment warten)
-  // afterRead(readAt, sentAt): nach dem Senden, waehrend die Uhr liest; liefert den Zeitpunkt des
-  // letzten gesendeten Zeichens. readAt = beobachteter Lesebeginn oder null (ohne Debug-Ausgabe).
+  // beforeSend(): runs before sending (e.g. to wait for the right moment).
+  // afterRead(readAt, sentAt): runs after sending while the clock reads; returns the time the last byte
+  // was sent. readAt = observed start of the read, or null without debug output.
   async _run(cmd, { expect, timeout, label, beforeSend, afterRead }) {
     if (this.state === 'closed' || this.state === 'connecting') throw new Error('Nicht verbunden');
     this._setBusy(true, label);
@@ -414,8 +406,8 @@ export class WordCore extends EventTarget {
       if (beforeSend) await beforeSend();
       const text = typeof cmd === 'function' ? cmd() : cmd;
       const sentAt = now();
-      // Die erste "Warte"-Zeile, die sicher nach dem Eintreffen unserer Bytes geschrieben wurde,
-      // markiert den Moment, in dem die Uhr den Befehl liest.
+      // The first "Warte" line certainly printed after our bytes arrived marks the moment the clock
+      // reads the command.
       const readP = this.debugOutput ? this._nextWarte(sentAt + 40) : null;
       const expectP = expect ? this.waitFor(expect, timeout, 'Antwort') : null;
       readP?.catch(() => {});
@@ -428,7 +420,7 @@ export class WordCore extends EventTarget {
       this._assertOpen();
       const result = expectP ? await expectP : undefined;
       if (!readAt) readAt = sentAt + (this.debugOutput ? this.loopPeriod : 2500);
-      // Erst wenn die Uhr 2,5 s nichts mehr empfangen hat, ist der Befehl wirklich abgeschlossen.
+      // The command is only complete once the clock has received nothing for 2.5 s.
       const done = Math.max(readAt, lastByteAt) + READ_TIMEOUT + 300;
       if (now() < done) await sleep(done - now());
       this._assertOpen();
@@ -485,8 +477,8 @@ export class WordCore extends EventTarget {
     return { ldr, rtc };
   }
 
-  // Sendet um `at` ein '_', aber nur, solange die Uhr sicher noch liest (letztes Zeichen bei `last`).
-  // Liefert den Sendezeitpunkt oder null, wenn es dafuer zu spaet ist (z.B. gedrosselte Timer im Hintergrund).
+  // Sends a '_' at `at`, but only while the clock is certainly still reading (previous byte at `last`).
+  // Returns the send time, or null if it is too late (e.g. timers throttled in a background tab).
   async _tick(at, last) {
     if (now() < at) await sleep(at - now());
     const t = now();
@@ -495,16 +487,16 @@ export class WordCore extends EventTarget {
     return t;
   }
 
-  // Uhrzeit stellen. offsetMs verschiebt die Zeit (manuelle Eingabe), sonst gilt die Uhrzeit dieses Computers.
+  // Sets the clock to this computer's time, shifted by offsetMs (manual entry).
   //
-  // Die Firmware liest den Befehl, bis 2,5 s kein Zeichen mehr kommt, wartet 100 ms, schickt ihn als Echo
-  // zurueck und schreibt sofort das RTC, das dabei seine Sekunde neu beginnt. Sie rechnet 5 s hinzu; 6.1
-  // kann dabei keinen Stundenuebertrag, deshalb wird nie eine Sekunde >= 55 gesendet.
-  // Genau wird es durch ein '_' nach dem Befehl (beide Firmwares lesen nur die Stellen 1-12): es kommt
-  // so an, dass das RTC auf eine volle Sekunde geschrieben wird. Liegt dieser Moment weiter als 2,2 s nach
-  // dem Lesebeginn, halten weitere '_' das Lesen offen. Ein Zeichen nach dem Ende des Lesens wuerde den
-  // naechsten Befehl verderben, deshalb wird keines mit groesserem Abstand gesendet.
-  // retry: ging die Feinabstimmung daneben (Uhr las spaeter als erwartet, gedrosselte Timer), einmal wiederholen
+  // The firmware reads the command until no byte has arrived for 2.5 s, waits 100 ms, echoes it and
+  // immediately writes the RTC, whose current second starts at that moment. It adds 5 s to the sent time;
+  // 6.1 carries that only into the minute, not the hour, so a second >= 55 is never sent.
+  // Precision comes from a '_' sent after the command (both firmwares only parse the 12 digits after
+  // the '@'): it is timed so that the RTC is written on a full second. If that moment is more than 2.2 s
+  // after the read starts, further '_' bytes keep the read open. A byte arriving after the read has
+  // ended would corrupt the next command, so no byte is ever sent after a longer gap.
+  // retry: if the fine timing missed (the clock read later than expected, throttled timers), try once more.
   async setTime({ retry = true, ...opts } = {}) {
     let r = await this._setTimeOnce(opts);
     if (retry && !r.aligned && (r.errorMs === null || Math.abs(r.errorMs) > 100)) r = await this._setTimeOnce(opts);
@@ -515,10 +507,10 @@ export class WordCore extends EventTarget {
   async _setTimeOnce({ offsetMs = 0, timechange = this.status?.timechange ?? 1 }) {
     const fieldsFor = (ms) => (timechange === 0 ? berlinFields(ms) : cetFields(ms));
     if (!validYear(fieldsFor(Date.now() + offsetMs).y)) throw new Error('Die Uhr kann nur Jahre von 2016 bis 2099.');
-    const shift = () => Date.now() - now() + offsetMs; // performance.now() -> Zielzeit
-    // Das RTC soll auf einer vollen Sekunde der Zielzeit geschrieben werden, das letzte Zeichen etwa bei `aim`
+    const shift = () => Date.now() - now() + offsetMs; // performance.now() -> target time (epoch ms)
+    // The RTC is to be written on a full second of the target time, with the last byte sent around `aim`
     const plan = (aim) => {
-      const show = Math.round((aim + this._writeLag + shift()) / 1000) * 1000; // zeigt die Uhr ab dem Schreiben
+      const show = Math.round((aim + this._writeLag + shift()) / 1000) * 1000; // shown by the clock from the RTC write on
       const fields = fieldsFor(show - 5000);
       return fields.s < 55 ? { fields, show, byteAt: show - shift() - this._writeLag } : null;
     };
@@ -527,10 +519,10 @@ export class WordCore extends EventTarget {
     const beforeSend = async () => {
       for (let tries = 0; tries < 8 && !p; tries++) {
         if (this.debugOutput) {
-          // direkt nach einer "Warte"-Zeile senden: dann liest die Uhr den Befehl beim naechsten Durchlauf
+          // send right after a "Warte" line so the clock reads the command on its next pass
           p = plan((await this._nextWarte()) + this.loopPeriod + AIM_AFTER_READ);
         } else {
-          // ohne Debug-Ausgabe liest die Uhr irgendwann in der naechsten loop()-Runde: Befehl AIM_BLIND vorher
+          // without debug output the clock reads some time in its next loop() pass: send AIM_BLIND ms before byteAt
           p = plan(now() + AIM_BLIND + 500 + tries * 1000);
           if (p) await sleep(p.byteAt - AIM_BLIND - now());
         }
@@ -538,9 +530,9 @@ export class WordCore extends EventTarget {
       if (!p) throw new Error('Die Uhrzeit konnte nicht gesendet werden');
     };
     const afterRead = async (readAt, sentAt) => {
-      let last = readAt ?? sentAt; // ab hier laeuft der Timeout der Uhr (ohne Debug-Ausgabe: fruehestens)
-      if (p.byteAt < last + 100) return last; // die Uhr hat spaeter gelesen als geplant
-      while (p.byteAt - last > MAX_GAP) { // Lesen offen halten
+      let last = readAt ?? sentAt; // the clock's read timeout runs from here (without debug output: at the earliest)
+      if (p.byteAt < last + 100) return last; // the clock started reading later than planned
+      while (p.byteAt - last > MAX_GAP) { // keep the read open
         const t = await this._tick(last + KEEP_GAP, last);
         if (t === null) return last;
         last = t;
@@ -555,26 +547,26 @@ export class WordCore extends EventTarget {
       timeout: this.state === 'setup' ? 20000 : 12000,
       expect: (l, t) => (/^@\d{12}/.test(l) ? t : undefined),
     }));
-    // Abweichung: Das Echo kommt direkt vor dem Schreiben. Die Uhr zeigt ab da p.show. Positiv = Uhr geht vor.
+    // Error (ms): the echo comes right before the RTC write, from then on the clock shows p.show. Positive = ahead.
     let errorMs = null;
     if (echo !== undefined) {
       const writtenAt = echo - ECHO_LAG;
       errorMs = Math.round(p.show - (writtenAt + shift()));
-      // Verzoegerung dieser Uhr (Quarz, USB) fuer das naechste Stellen uebernehmen
+      // Adopt this clock's lag (crystal, USB) for the next time set
       if (tickAt !== null && Math.abs(writtenAt - tickAt - SET_LAG) < 100) this._writeLag = writtenAt - tickAt;
     }
     return { sent: p.fields, errorMs, aligned: tickAt !== null };
   }
 
-  // Ersteinrichtung: Zeit setzen (die Uhr beschreibt dann ihr EEPROM) und danach neu verbinden.
+  // Initial setup: set the time (the clock then initialises its EEPROM), then reconnect.
   async initialSetup() {
     const initDone = this.waitSeen(['eeprom'], now(), 60000, 'Bestätigung');
     initDone.catch(() => {});
-    // kein Wiederholen hier: nach dem Stellen startet die Uhr neu
+    // no retry here: once the time is set, the clock leaves the LED test and finishes starting up
     let r = await this.setTime({ timechange: 1, retry: false });
     await initDone;
     await this._handshake();
-    // Im LED-Test liest die Uhr unregelmaessig (1 oder 2 s): ging die Feinabstimmung daneben, jetzt genau stellen
+    // The LED test reads at irregular intervals (1 or 2 s): if the fine timing missed, set it precisely now
     if (this.state === 'ready' && (r.errorMs === null || Math.abs(r.errorMs) > 100)) r = await this.setTime({ timechange: 1 });
     return r;
   }

@@ -6,41 +6,41 @@ void SerialCommunication() {
   if (mode_read.charAt(0) == '@') {
     analyzeAndSetTime();
   }
-  else if (mode_read.charAt(0) == '#') { // Hex Color
+  else if (mode_read.charAt(0) == '#') { // Colour: '#/RRRGGGBBB' or a colour mode
     red = 255;
     green = 255;
     blue = 0;
     WordClock_color();
     if (mode_read.charAt(1) == '%') {
-      setColorMode(1); // langsamer Farbwechsel
+      setColorMode(1); // Slow colour cycle
     }
     if (mode_read.charAt(1) == '=') {
-      setColorMode(2); // bunt
+      setColorMode(2); // Colourful
     }
     if (mode_read.charAt(1) == '!') {
-      setColorMode(3); // Regenbogen
+      setColorMode(3); // Rainbow
     }
     if (mode_read.charAt(1) == '/') {
-      if (analyzeAndSetRGB()) { // nur bei gueltiger Farbe umschalten
-        EEPROM.update(EE_COLOR_MODE, 0); //Automatischer RGB-Farbwechsel aus!
+      if (analyzeAndSetRGB()) { // Switch to the fixed colour only if the colour is valid
+        EEPROM.update(EE_COLOR_MODE, 0);
         enableColorCycle = 0;
       }
     }
   }
-  else if (mode_read.charAt(0) == '!') { // Brightness
+  else if (mode_read.charAt(0) == '!') {
     analyzeAndSetBrightness();
   }
 
-  else if (mode_read.charAt(0) == '=') { // Selftest
+  else if (mode_read.charAt(0) == '=') {
     selfcheck();
   }
 
-  else if (mode_read.charAt(0) == '+') { // Zeitumstellung
+  else if (mode_read.charAt(0) == '+') {
     analyzeAndSetTimechange();
   }
 
-  else if (mode_read.charAt(0) == '&') { // Sendet die Config der Uhr zum PC
-    Serial.print(F("@")); // zur Erkennung am PC '@' schicken vorab
+  else if (mode_read.charAt(0) == '&') {
+    Serial.print(F("@")); // Leading '@' lets the PC recognise the status reply
     sendConfigOfClockToPC();
   }
   else if (mode_read.charAt(0) == '/') {
@@ -53,25 +53,25 @@ void SerialCommunication() {
   else if (mode_read.charAt(0) == '.'){
     checkIfNight();
   }
-  else if (mode_read.charAt(0) == '-') { //Hardreset for debugging
+  else if (mode_read.charAt(0) == '-') { // Debug: mark the clock as not set up; the next boot runs the LED test again
     Serial.println(F("HARD OW_COMPUT"));
     EEPROM.update(EE_INIT_DONE, 0);
   }
   else if (mode_read.charAt(0) == '?') {
-    int divider = parseNumber(1, 1, 1, 9); // 0 waere eine Division durch 0 in LDR()
+    int divider = parseNumber(1, 1, 1, 9); // Minimum 1: 0 would divide by zero in LDR()
     if (divider >= 0) {
-      EEPROM.update(EE_LDR_DIVIDER, divider); //LDR-Teiler neu beschreiben
+      EEPROM.update(EE_LDR_DIVIDER, divider);
       LDRDivider = divider;
     }
   }
   update_leds = true;
-  Temp1 = EEPROM.read(EE_PC_WRITES); //Anzahl der neubeschreibungen durch den PC zählen.
+  Temp1 = EEPROM.read(EE_PC_WRITES);
   Temp2 = Temp1 + 1;
   EEPROM.update(EE_PC_WRITES, Temp2);
 }
 byte daysInMonth(byte m, int y) {
   if (m == 2) {
-    return (y % 4 == 0) ? 29 : 28; // im RTC-Bereich 2000-2099 ist jedes durch 4 teilbare Jahr ein Schaltjahr
+    return (y % 4 == 0) ? 29 : 28; // Within the RTC range 2000-2099 every year divisible by 4 is a leap year
   }
   if (m == 4 || m == 6 || m == 9 || m == 11) {
     return 30;
@@ -79,12 +79,12 @@ byte daysInMonth(byte m, int y) {
   return 31;
 }
 
-// Liest len Ziffern ab Position start aus mode_read. Liefert -1, wenn eine Stelle keine Ziffer ist
-// (auch wenn der Befehl zu kurz ist) oder der Wert ausserhalb von [minVal, maxVal] liegt.
+// Reads len digits of mode_read from position start. Returns -1 if a character is not a digit
+// (also when the command is too short) or the value is outside [minVal, maxVal].
 int parseNumber(byte start, byte len, int minVal, int maxVal) {
   int value = 0;
   for (byte k = start; k < start + len; k++) {
-    char c = mode_read[k]; // ausserhalb des Strings liefert String '\0'
+    char c = mode_read[k]; // String returns '\0' past the end
     if (!isDigit(c)) {
       return -1;
     }
@@ -100,7 +100,7 @@ void invalidCommand() {
   if (SerialDebug_enable == true) {Serial.println(F("Ungueltiger Befehl, ignoriert."));}
 }
 
-void analyzeAndSetTime() { // "@YYMMDDhhmmss" aus mode_read
+void analyzeAndSetTime() { // Parses "@YYMMDDhhmmss" from mode_read
   int y = parseNumber(1, 2, 0, 99);
   int mo = parseNumber(3, 2, 1, 12);
   int d = parseNumber(5, 2, 1, 31);
@@ -108,7 +108,7 @@ void analyzeAndSetTime() { // "@YYMMDDhhmmss" aus mode_read
   int mi = parseNumber(9, 2, 0, 59);
   int s = parseNumber(11, 2, 0, 59);
   if (y < 0 || mo < 0 || d < 0 || h < 0 || mi < 0 || s < 0 || d > daysInMonth(mo, y + 2000)) {
-    invalidCommand(); // keine ungueltige Zeit ins RTC schreiben
+    invalidCommand();
     return;
   }
   jahr = y + 2000;
@@ -116,8 +116,8 @@ void analyzeAndSetTime() { // "@YYMMDDhhmmss" aus mode_read
   datum = d;
   stunde = h;
   minute = mi;
-  sekunde = s + 5; // Ausgleich fuer die Dauer von Uebertragung und Serial-Timeout
-  if (sekunde >= 60) { // Uebertrag bis ins Jahr, sonst landet z.B. "23:60" im RTC
+  sekunde = s + 5; // Allowance for transfer and read timeout; the website subtracts these 5 s
+  if (sekunde >= 60) { // Carry up to the year so the RTC never gets an invalid time like 23:59:60
     sekunde = sekunde - 60;
     if (++minute >= 60) {
       minute = 0;
@@ -136,7 +136,7 @@ void analyzeAndSetTime() { // "@YYMMDDhhmmss" aus mode_read
   delay(100);
   Serial.println(mode_read);
   clock.setDateTime(jahr, monat, datum, stunde, minute, sekunde);
-  if (InitalsetupDone != 1) { //prüft, ob der EEPROM schon eingestellt wurde.
+  if (InitalsetupDone != 1) { // The first '@' on a new clock also runs the first setup
       EEPROM_Initialsetup();
   }
 }
@@ -166,8 +166,8 @@ void analyzeAndSetBrightness() {
   EEPROM.update(EE_NIGHT_END, NTendH);
 }
 
-// Farbwechsel-Modi 1-3: nur der Modus wird gespeichert. Die feste Farbe in EE_RED/GREEN/BLUE bleibt
-// erhalten (vorher wurde sie mit Rot ueberschrieben und war nach dem Zurueckschalten auf Modus 0 weg).
+// Colour modes 1-3 only store the mode. The fixed colour in EE_RED/GREEN/BLUE is kept, so it is
+// still there after switching back to mode 0.
 void setColorMode(byte mode) {
   enableColorCycle = mode;
   EEPROM.update(EE_COLOR_MODE, mode);
@@ -176,7 +176,7 @@ void setColorMode(byte mode) {
   }
 }
 
-bool analyzeAndSetRGB() { // '#/RRRGGGBBB', liefert false bei ungueltiger Farbe
+bool analyzeAndSetRGB() { // Parses '#/RRRGGGBBB'; returns false if the colour is invalid
   int r = parseNumber(2, 3, 0, 255);
   int g = parseNumber(5, 3, 0, 255);
   int b = parseNumber(8, 3, 0, 255);
@@ -205,14 +205,14 @@ void analyzeAndSetTimechange() {
 
 void sendConfigOfClockToPC() {
   Serial.println(F("STATUS BEGIN"));
-  // Helligkeit aus dem EEPROM: mit PC am USB ist sie im RAM voruebergehend auf 39/40 begrenzt (startup())
+  // Brightness from EEPROM: with a PC connected, the RAM values are capped at 39/40 (see startup())
   Serial.println(EEPROM.read(EE_MAX_DAY));
   Serial.println(EEPROM.read(EE_MIN_DAY));
   Serial.println(EEPROM.read(EE_MAX_NIGHT));
   Serial.println(EEPROM.read(EE_MIN_NIGHT));
   Serial.println(NTbeginH);
   Serial.println(NTendH);
-  // Farbe ebenfalls aus dem EEPROM: in den Farbwechsel-Modi steht in R/G/B nur die zuletzt gezeichnete Farbe
+  // Colour from EEPROM too: in the colour modes R/G/B only hold the last drawn colour
   Serial.println(EEPROM.read(EE_RED));
   Serial.println(EEPROM.read(EE_GREEN));
   Serial.println(EEPROM.read(EE_BLUE));
@@ -220,7 +220,7 @@ void sendConfigOfClockToPC() {
   Serial.println(enableTimechange);
   Serial.println(startups);
   Serial.println(runtime);
-  // ab 6.2: zusaetzliche Werte als "NAME=Wert" (die ersten 13 Zeilen bleiben wie in 6.1)
+  // 6.2 adds "NAME=value" lines; the first 13 lines stay as in 6.1 for compatibility
   Serial.print(F("LDR="));
   Serial.println(LDRDivider);
   Serial.print(F("NR="));
@@ -261,14 +261,14 @@ void selfcheck() {
   else if (sensorValue == 255) {
     Serial.println(F("LDRTH"));
   }
-  else if (sensorValue <= 1) { // 1 landete vorher bei "PROBLEM"
+  else if (sensorValue <= 1) {
     Serial.println(F("LDRTL"));
   }
   else {
     Serial.println(F("PROBLEM"));
   }
   RTCRead();
-  if (rtcError) { // gleiche Pruefung wie im Betrieb (RTC_Check)
+  if (rtcError) { // Same check as during normal operation (RTC_Check())
     Serial.println(F("RTCNOTSET"));
   }
   else {
@@ -276,13 +276,13 @@ void selfcheck() {
   }
 }
 
-void reset() { // Werkseinstellungen wiederherstellen und sofort uebernehmen
+void reset() { // Restores the factory defaults and applies them immediately
   byte Temp1;
   writeDefaultSettings();
-  Temp1 = EEPROM.read(EE_RESETS); //Anzahl der resets zählen.
+  Temp1 = EEPROM.read(EE_RESETS);
   Temp1 = Temp1 + 1;
-  EEPROM.update(EE_RESETS, Temp1); //reset + 1
-  loadSettings(); // vorher galten die alten Werte bis zum naechsten Neustart weiter
+  EEPROM.update(EE_RESETS, Temp1);
+  loadSettings();
 }
 void SerialDebug() {
   Serial.print(F("Loop durchlaufen am "));

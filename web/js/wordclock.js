@@ -1,19 +1,19 @@
-// Nachbildung der Anzeige der Firmware (WordCore/LED_Routine.ino + LED_Layout.ino), LED fuer LED.
-// Die Farbmodi 1-3 haengen von der Reihenfolge ab, in der die LEDs gesetzt werden: deshalb ist das
-// hier bewusst eine woertliche Uebersetzung und keine "schoenere" Neuschreibung.
+// Re-implements the firmware's display (WordCore/LED_Routine.ino + LED_Layout.ino) LED by LED.
+// Colour modes 1-3 depend on the order in which the LEDs are set, so this is deliberately a literal
+// translation, not a cleaner rewrite.
 
 export const NUM_LEDS = 125;
 
-// Die Zeilen sind als Schlange verdrahtet: gerade Zeilen links -> rechts, ungerade rechts -> links.
+// The rows are wired as a serpentine: even rows run left to right, odd rows right to left.
 export function cellLed(row, col) {
   return row * 11 + (row % 2 === 0 ? col : 10 - col);
 }
 
-// Minutenpunkte in den Ecken. Die Firmware schaltet sie in der Reihenfolge 123, 122, 124, 121.
-// Annahme zur Lage (Kette laeuft von LED 120 unten rechts gegen den Uhrzeigersinn um die Platte):
+// Minute dots in the corners. The firmware lights them in the order 123, 122, 124, 121.
+// Their positions are assumed (the chain continues from LED 120, bottom right, anticlockwise round the plate):
 export const CORNER_LEDS = { tl: 123, tr: 122, bl: 124, br: 121 };
 
-// "WORDCLOCK" als Diagonale: das Logo, das die Uhr beim Start und als Statusanzeige zeigt (effects.ino)
+// "WORDCLOCK" as a diagonal: the logo the clock shows at startup and as a status display (effects.ino)
 export const LOGO_LEDS = [20, 24, 40, 48, 60, 72, 80, 96, 100];
 const LOGO_RAINBOW = [
   [0, 255, 0], [0, 168, 87], [0, 81, 174], [0, 0, 255], [87, 0, 168],
@@ -35,21 +35,21 @@ export const FACTORY = {
   nightBegin: 23, nightEnd: 6, timechange: 1, ldr: 3,
 };
 
-// Nachtzeit (LDR_EEPROM.ino). Die Original-Firmware 6.1 (legacy) rechnet nur einen Zeitraum ueber
-// Mitternacht richtig, 6.2 auch einen innerhalb eines Tages.
+// Night window (LDR_EEPROM.ino). The original firmware 6.1 (legacy) only handles a window across
+// midnight correctly; 6.2 also handles one within a single day.
 export function isNight(h, begin, end, legacy = false) {
   if (legacy) return begin <= h || end > h;
   return begin > end ? h >= begin || h < end : h >= begin && h < end;
 }
 
 export class WordClockModel {
-  // Wie nach einem Befehl an die Uhr: '#/' setzt die Farbe, '#%', '#=', '#!' starten bei Rot.
+  // State right after the matching command: '#/' sets the colour, '#%', '#=' and '#!' start at red.
   constructor(color = FACTORY.color, mode = 0) {
     this.mode = mode;
     [this.R, this.G, this.B] = mode === 0 ? color : [255, 0, 0];
   }
 
-  // LED_Routine(): liefert ein Array mit 125 Eintraegen, [r, g, b] oder null (aus).
+  // LED_Routine(): returns 125 entries, each [r, g, b] or null (off).
   render(stunde, minute) {
     const leds = new Array(NUM_LEDS).fill(null);
     this._leds = leds;
@@ -72,7 +72,7 @@ export class WordClockModel {
     if ([5, 10, 15, 20, 35].includes(cMinute)) this._word(36, 33); // NACH
     if ([25, 30, 35].includes(cMinute)) this._word(44, 47); // HALB
     if (cStunde % 12 === 1 && cMinute === 0) {
-      this._word(86, 84); // "ES IST EIN UHR"
+      this._word(86, 84); // EIN without the S: "ES IST EIN UHR"
     } else {
       const [a, b] = HOUR_WORDS[cStunde % 12];
       this._word(a, b);
@@ -83,7 +83,7 @@ export class WordClockModel {
   }
 
   _set(k) {
-    this._leds[k] = [this.R & 0xff, this.G & 0xff, this.B & 0xff]; // setRGB() nimmt uint8_t
+    this._leds[k] = [this.R & 0xff, this.G & 0xff, this.B & 0xff]; // setRGB() takes uint8_t
   }
 
   _word(from, to) {
@@ -104,7 +104,7 @@ export class WordClockModel {
     });
   }
 
-  _colorCycle() { // ColorCycle(): Modus 1, ein Schritt pro Minute
+  _colorCycle() { // ColorCycle(): mode 1, one step per minute
     if (this.R > 0 && this.B === 0) { this.R -= 1; this.G += 1; }
     if (this.G > 0 && this.R === 0) { this.G -= 1; this.B += 1; }
     if (this.B > 0 && this.G === 0) { this.R += 1; this.B -= 1; }
@@ -126,7 +126,7 @@ export class WordClockModel {
     }
   }
 
-  _rand(n) { // RAND1()..RAND4(): jede Stufe ruft die vorige auf
+  _rand(n) { // RAND1()..RAND4(): each level calls the previous one first
     const m = this.mode;
     if (m === 2 || m === 3) { this.R = 255; this.G = 0; this.B = 0; }
     this._set(123);
@@ -143,8 +143,8 @@ export class WordClockModel {
   }
 }
 
-// Statusbilder der Uhr (effects.ino)
-export function logoFrame(color) { // WordClock() ohne Farbe = Regenbogen, sonst WordClock_color()
+// Status displays of the clock (effects.ino)
+export function logoFrame(color) { // no colour: WordClock() rainbow logo, otherwise WordClock_color()
   const leds = new Array(NUM_LEDS).fill(null);
   LOGO_LEDS.forEach((k, i) => { leds[k] = color ? [...color] : [...LOGO_RAINBOW[i]]; });
   return leds;
@@ -156,7 +156,7 @@ export function fillFrame(color, count = NUM_LEDS) {
   return leds;
 }
 
-// Uhrzeit in Worten, wie sie die Platte zeigt (fuer Screenreader und Titel)
+// The time in words as the plate shows it, for screen readers and the caption
 export function phrase(stunde, minute) {
   const names = ['zwölf', 'eins', 'zwei', 'drei', 'vier', 'fünf', 'sechs', 'sieben', 'acht', 'neun', 'zehn', 'elf'];
   const c = minute - (minute % 5);

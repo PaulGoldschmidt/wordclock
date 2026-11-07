@@ -1,9 +1,9 @@
 int timer;
-uint8_t gHue = 0; // rotating "base color" used by many of the patterns
+uint8_t gHue = 0; // Base hue for confetti(), slowly rotating
 
 void confetti()
 {
-  // random colored speckles that blink in and fade smoothly
+  // Random coloured speckles that blink in and fade out
   fadeToBlackBy(leds, NUM_LEDS, 10);
   int pos = random16(NUM_LEDS);
   leds[pos] += CHSV( gHue + random8(64), 200, 255);
@@ -16,11 +16,11 @@ void startup() {
     SerialAvailable = true;
     Serial.println(F("Springe Startup-Animation."));
     temp1 = Serial.readString();
-    brightness_maxNT = 40; //um den Ardino zu schützen Helligkeit limitieren
+    brightness_maxNT = 40; // PC connected: cap the brightness (RAM only) to protect the Arduino
     brightness_maxDT = 40;
     brightness_minNT = 39;
     brightness_minDT = 39;
-    FastLED.setMaxPowerInVoltsAndMilliamps(5, USB_POWER_MA); // gilt auch fuer Selbsttest und spaetere Helligkeitsaenderungen
+    FastLED.setMaxPowerInVoltsAndMilliamps(5, USB_POWER_MA); // Also applies to the self-test and later brightness changes
   }
   if (SerialAvailable == false) {
     SerialDebug_enable = false;
@@ -30,14 +30,14 @@ void startup() {
     else {
       brightness = brightness_maxDT;
     }
-  byte targetBrightness = brightness; // Tag- oder Nacht-Maximum, auch fuer das Logo unten
+  byte targetBrightness = brightness; // Day or night maximum, also used for the logo below
   FastLED.setBrightness(brightness);
   while (timer != 750) {
     confetti();
       delay(10);
       timer++;
       EVERY_N_MILLISECONDS(20) {
-        gHue++;  // slowly cycle the "base color" through the rainbow
+        gHue++;
       }
       FastLED.show();
     }
@@ -49,11 +49,11 @@ void startup() {
       timer++;
       delay(10);
       EVERY_N_MILLISECONDS(20) {
-        gHue++;  // slowly cycle the "base color" through the rainbow
+        gHue++;
       }
     }
     FastLED.clear();
-    while (brightness != targetBrightness) { // war immer brightness_maxDT: nachts volle Tageshelligkeit
+    while (brightness != targetBrightness) {
     WordClock();
       brightness++;
       FastLED.setBrightness(brightness);
@@ -133,7 +133,7 @@ void WordClock_color() {
   FastLED.show();
 }
 
-void SerialLEDInformation() { // die Uhr ist im Seriellen Empfangsmodus.
+void SerialLEDInformation() { // Blue logo while the clock reads a serial command
   FastLED.clear();
   FastLED.setBrightness(255);
   red = 0;
@@ -143,7 +143,7 @@ void SerialLEDInformation() { // die Uhr ist im Seriellen Empfangsmodus.
   FastLED.show();
 }
 
-void counting() { //hochzählen auf festgelegten Wert.
+void counting() { // Self-test: light up all LEDs one after another
   FastLED.clear();
   FastLED.setBrightness(50);
   int counter = 0;
@@ -155,13 +155,13 @@ void counting() { //hochzählen auf festgelegten Wert.
   }
 }
 
-// Fehleranzeige, wenn das RTC keine gueltige Zeit liefert: ein Blink-Zyklus (2 s) pro loop()-Durchlauf.
-// Bewusst nicht blockierend, damit serielle Befehle (z.B. '@' zum Stellen der Zeit) weiter verarbeitet werden.
+// Error display while the RTC has no valid time: one 2 s blink per loop() pass. Deliberately
+// non-blocking so serial commands (e.g. '@' to set the time) are still processed.
 void Error_RTC() {
   red = 0;
   green = 255;
   blue = 0;
-  WordClock_color(); // zeigt das Logo mit voller Helligkeit
+  WordClock_color();
   delay(1000);
   FastLED.setBrightness(0);
   FastLED.show();
