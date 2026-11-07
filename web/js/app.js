@@ -438,7 +438,7 @@ function updateButtons() {
 function loadFromClock(s) {
   const d = clone(ui.draft);
   for (const k of SETTINGS) d[k] = s[k] ?? FACTORY[k]; // nicht auslesbar (6.1: Nacht-Helligkeit): Werkseinstellung zeigen
-  if (s.mode === 0) d.color = [...s.color]; // in den Farbwechsel-Modi aendert sich die Farbe laufend
+  if (s.color) d.color = [...s.color]; // null: 6.1 in einem Farbwechsel-Modus, die feste Farbe ist nicht auslesbar
   ui.known = clone(d);
   for (const k of SETTINGS) ui.known[k] = s[k] ?? null; // unbekannt: "Uebernehmen" bleibt markiert
   ui.draft = d;

@@ -212,9 +212,10 @@ void sendConfigOfClockToPC() {
   Serial.println(EEPROM.read(EE_MIN_NIGHT));
   Serial.println(NTbeginH);
   Serial.println(NTendH);
-  Serial.println(R);
-  Serial.println(G);
-  Serial.println(B);
+  // Farbe ebenfalls aus dem EEPROM: in den Farbwechsel-Modi steht in R/G/B nur die zuletzt gezeichnete Farbe
+  Serial.println(EEPROM.read(EE_RED));
+  Serial.println(EEPROM.read(EE_GREEN));
+  Serial.println(EEPROM.read(EE_BLUE));
   Serial.println(enableColorCycle);
   Serial.println(enableTimechange);
   Serial.println(startups);

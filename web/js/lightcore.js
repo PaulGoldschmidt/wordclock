@@ -361,7 +361,8 @@ export class LightCore extends EventTarget {
     this.legacy = extra.VERSION === undefined; // 6.1 kennt die Zusatzzeilen noch nicht
     this.firmware = extra.VERSION || '6.1';
     this.status = {
-      dayMax, dayMin, nightMax, nightMin, nightBegin, nightEnd, color: [r, g, b], mode, timechange,
+      // 6.1 meldet in den Farbwechsel-Modi die zuletzt gezeichnete Farbe, ab 6.2 immer die gespeicherte feste Farbe
+      dayMax, dayMin, nightMax, nightMin, nightBegin, nightEnd, color: this.legacy && mode !== 0 ? null : [r, g, b], mode, timechange,
       startups, runtime,
       ldr: extra.LDR !== undefined ? Number(extra.LDR) : this.boot.ldr,
       number: extra.NR !== undefined ? Number(extra.NR) : this.boot.number,
