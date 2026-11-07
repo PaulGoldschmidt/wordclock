@@ -479,9 +479,11 @@ async function connect(port) {
     banner('Die Verbindung zur Uhr wurde unterbrochen. Ist das USB-Kabel noch eingesteckt?', 'error');
   });
   lc.addEventListener('timeset', (e) => {
-    const err = e.detail.errorMs;
+    const err = e.detail.errorMs === null ? null : Math.abs(e.detail.errorMs);
+    let text = 'Uhrzeit gesendet.';
+    if (err !== null) text = `Gestellt, Abweichung ${err < 1000 ? `${err} ms` : `${(err / 1000).toLocaleString('de-DE', { maximumFractionDigits: 1 })} s`}.`;
     ui.timeMsg = {
-      text: err === null ? 'Uhrzeit gesendet.' : `Gestellt, Abweichung ${Math.abs(err / 1000).toLocaleString('de-DE', { maximumFractionDigits: 1 })} s.`,
+      text,
       cls: 'good',
       until: now() + 8000,
     };

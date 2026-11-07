@@ -7,12 +7,21 @@
 //    die Uhr die Startanimation, begrenzt die Helligkeit und schreibt Debug-Ausgaben ("PC-Modus").
 //  - Ein Befehl wird erst gelesen, wenn mindestens 13 Zeichen im Puffer liegen; danach liest die Uhr
 //    bis 2,5 s lang nichts mehr kommt. Zwei Befehle duerfen also nie direkt hintereinander kommen.
+//    Ein Zeichen, das waehrend des Lesens ankommt, verlaengert es: darauf beruht das genaue Stellen der Zeit.
 //  - Im PC-Modus meldet jeder loop()-Durchlauf "Warte auf neue Befehle..." direkt vor dieser Pruefung.
 
 const BAUD = 115200;
 const HELLO = 'PC2ARDUINO';
 const READ_TIMEOUT = 2500; // Serial.setTimeout() der Firmware fuer Befehle
 const CMD_LEN = 13;
+
+// Uhrzeit stellen (setTime)
+const SET_LAG = READ_TIMEOUT + 100; // letztes Zeichen -> RTC geschrieben: Ende von readString(), dann delay(100)
+const ECHO_LAG = 2; // die Echo-Zeile ist gut 1 ms nach dem Schreiben des RTC fertig gesendet, dazu USB
+const MAX_GAP = READ_TIMEOUT - 300; // groesster sicherer Abstand zweier Zeichen, solange die Uhr liest
+const KEEP_GAP = 1500; // Abstand der Fuellzeichen, die das Lesen offen halten
+const AIM_AFTER_READ = 1300; // PC-Modus: geplanter Abstand Lesebeginn -> letztes Zeichen (verpasst: siehe retry)
+const AIM_BLIND = 2600; // ohne Debug-Ausgabe: Befehl -> letztes Zeichen (gelesen wird innerhalb einer loop()-Runde)
 const WARTE = 'Warte auf neue Befehle';
 const STATUS_END = 'STATUS END';
 const encoder = new TextEncoder();
@@ -107,6 +116,7 @@ export class LightCore extends EventTarget {
     this._lastLoopLine = 0;
     this._lastWarte = 0;
     this._seen = {}; // Zeitpunkt der letzten Startmeldungen (Banner, PC-Modus, ...)
+    this._writeLag = SET_LAG + 3; // letztes Zeichen gesendet -> RTC geschrieben, wird beim Stellen nachgemessen
   }
 
   // Uhrzeit der Uhr, zwischen den Debug-Zeilen hochgezaehlt (null, solange unbekannt oder ungueltig)
@@ -182,14 +192,14 @@ export class LightCore extends EventTarget {
     this._setState('closed');
   }
 
-  async _write(text) {
+  async _write(text, log = text !== HELLO) {
     const writer = this.port.writable.getWriter();
     try {
       await writer.write(encoder.encode(text));
     } finally {
       writer.releaseLock();
     }
-    if (text !== HELLO) this._log(text, 'out');
+    if (log) this._log(text, 'out');
   }
 
   _readLoop() {
@@ -393,7 +403,10 @@ export class LightCore extends EventTarget {
     this._emit('busy', busy);
   }
 
-  async _run(cmd, { expect, timeout, label, beforeSend }) {
+  // beforeSend(): vor dem Senden (z.B. auf den richtigen Moment warten)
+  // afterRead(readAt, sentAt): nach dem Senden, waehrend die Uhr liest; liefert den Zeitpunkt des
+  // letzten gesendeten Zeichens. readAt = beobachteter Lesebeginn oder null (ohne Debug-Ausgabe).
+  async _run(cmd, { expect, timeout, label, beforeSend, afterRead }) {
     if (this.state === 'closed' || this.state === 'connecting') throw new Error('Nicht verbunden');
     this._setBusy(true, label);
     try {
@@ -410,10 +423,12 @@ export class LightCore extends EventTarget {
       let readAt = readP ? await readP.catch(() => null) : null;
       this._assertOpen();
       if (readAt) this._emit('reading', { cmd: text, at: readAt });
+      const lastByteAt = afterRead ? await afterRead(readAt, sentAt) : sentAt;
+      this._assertOpen();
       const result = expectP ? await expectP : undefined;
       if (!readAt) readAt = sentAt + (this.debugOutput ? this.loopPeriod : 2500);
       // Erst wenn die Uhr 2,5 s nichts mehr empfangen hat, ist der Befehl wirklich abgeschlossen.
-      const done = readAt + READ_TIMEOUT + 300;
+      const done = Math.max(readAt, lastByteAt) + READ_TIMEOUT + 300;
       if (now() < done) await sleep(done - now());
       this._assertOpen();
       return result;
@@ -469,58 +484,97 @@ export class LightCore extends EventTarget {
     return { ldr, rtc };
   }
 
+  // Sendet um `at` ein '_', aber nur, solange die Uhr sicher noch liest (letztes Zeichen bei `last`).
+  // Liefert den Sendezeitpunkt oder null, wenn es dafuer zu spaet ist (z.B. gedrosselte Timer im Hintergrund).
+  async _tick(at, last) {
+    if (now() < at) await sleep(at - now());
+    const t = now();
+    if (t - last > MAX_GAP) return null;
+    await this._write('_', false);
+    return t;
+  }
+
   // Uhrzeit stellen. offsetMs verschiebt die Zeit (manuelle Eingabe), sonst gilt die Uhrzeit dieses Computers.
-  // Die Firmware rechnet beim Stellen 5 s fuer die Uebertragung hinzu; 6.1 kann dabei keinen
-  // Stundenuebertrag. Deshalb wird nie eine Sekunde >= 55 gesendet.
-  async setTime({ offsetMs = 0, timechange = this.status?.timechange ?? 1 } = {}) {
+  //
+  // Die Firmware liest den Befehl, bis 2,5 s kein Zeichen mehr kommt, wartet 100 ms, schickt ihn als Echo
+  // zurueck und schreibt sofort das RTC, das dabei seine Sekunde neu beginnt. Sie rechnet 5 s hinzu; 6.1
+  // kann dabei keinen Stundenuebertrag, deshalb wird nie eine Sekunde >= 55 gesendet.
+  // Genau wird es durch ein '_' nach dem Befehl (beide Firmwares lesen nur die Stellen 1-12): es kommt
+  // so an, dass das RTC auf eine volle Sekunde geschrieben wird. Liegt dieser Moment weiter als 2,2 s nach
+  // dem Lesebeginn, halten weitere '_' das Lesen offen. Ein Zeichen nach dem Ende des Lesens wuerde den
+  // naechsten Befehl verderben, deshalb wird keines mit groesserem Abstand gesendet.
+  // retry: ging die Feinabstimmung daneben (Uhr las spaeter als erwartet, gedrosselte Timer), einmal wiederholen
+  async setTime({ retry = true, ...opts } = {}) {
+    let r = await this._setTimeOnce(opts);
+    if (retry && !r.aligned && (r.errorMs === null || Math.abs(r.errorMs) > 100)) r = await this._setTimeOnce(opts);
+    this._emit('timeset', r);
+    return r;
+  }
+
+  async _setTimeOnce({ offsetMs = 0, timechange = this.status?.timechange ?? 1 }) {
     const fieldsFor = (ms) => (timechange === 0 ? berlinFields(ms) : cetFields(ms));
     if (!validYear(fieldsFor(Date.now() + offsetMs).y)) throw new Error('Die Uhr kann nur Jahre von 2016 bis 2099.');
-    let sent = null;
-    let targetMs = 0;
-    const beforeSend = async () => {
-      for (let tries = 0; tries < 8; tries++) {
-        // direkt nach einer "Warte"-Zeile senden: dann liest die Uhr den Befehl beim naechsten Durchlauf
-        const setAt = this.debugOutput
-          ? (await this._nextWarte()) + this.loopPeriod + READ_TIMEOUT + 100
-          : now() + 900 + READ_TIMEOUT + 100;
-        const wallAt = Date.now() + (setAt - now());
-        const target = Math.round((wallAt + offsetMs - 5000) / 1000) * 1000; // auf die naechste ganze Sekunde
-        const f = fieldsFor(target);
-        if (f.s < 55) {
-          sent = f;
-          targetMs = target;
-          return;
-        }
-        if (!this.debugOutput) await sleep((60 - f.s) * 1000 + 200);
-      }
-      throw new Error('Die Uhrzeit konnte nicht gesendet werden');
+    const shift = () => Date.now() - now() + offsetMs; // performance.now() -> Zielzeit
+    // Das RTC soll auf einer vollen Sekunde der Zielzeit geschrieben werden, das letzte Zeichen etwa bei `aim`
+    const plan = (aim) => {
+      const show = Math.round((aim + this._writeLag + shift()) / 1000) * 1000; // zeigt die Uhr ab dem Schreiben
+      const fields = fieldsFor(show - 5000);
+      return fields.s < 55 ? { fields, show, byteAt: show - shift() - this._writeLag } : null;
     };
-    const echo = await this._enqueue(() => this._run(() => commands.time(sent), {
+    let p = null;
+    let tickAt = null;
+    const beforeSend = async () => {
+      for (let tries = 0; tries < 8 && !p; tries++) {
+        if (this.debugOutput) {
+          // direkt nach einer "Warte"-Zeile senden: dann liest die Uhr den Befehl beim naechsten Durchlauf
+          p = plan((await this._nextWarte()) + this.loopPeriod + AIM_AFTER_READ);
+        } else {
+          // ohne Debug-Ausgabe liest die Uhr irgendwann in der naechsten loop()-Runde: Befehl AIM_BLIND vorher
+          p = plan(now() + AIM_BLIND + 500 + tries * 1000);
+          if (p) await sleep(p.byteAt - AIM_BLIND - now());
+        }
+      }
+      if (!p) throw new Error('Die Uhrzeit konnte nicht gesendet werden');
+    };
+    const afterRead = async (readAt, sentAt) => {
+      let last = readAt ?? sentAt; // ab hier laeuft der Timeout der Uhr (ohne Debug-Ausgabe: fruehestens)
+      if (p.byteAt < last + 100) return last; // die Uhr hat spaeter gelesen als geplant
+      while (p.byteAt - last > MAX_GAP) { // Lesen offen halten
+        const t = await this._tick(last + KEEP_GAP, last);
+        if (t === null) return last;
+        last = t;
+      }
+      tickAt = await this._tick(p.byteAt, last);
+      return tickAt ?? last;
+    };
+    const echo = await this._enqueue(() => this._run(() => commands.time(p.fields), {
       beforeSend,
+      afterRead,
       label: 'Uhrzeit',
       timeout: this.state === 'setup' ? 20000 : 12000,
       expect: (l, t) => (/^@\d{12}/.test(l) ? t : undefined),
     }));
-    // Abweichung: Das Echo kommt direkt vor dem Stellen. Die Uhr zeigt ab da die gesendete Zeit
-    // plus 5 s. Positiv = Uhr geht vor.
+    // Abweichung: Das Echo kommt direkt vor dem Schreiben. Die Uhr zeigt ab da p.show. Positiv = Uhr geht vor.
     let errorMs = null;
     if (echo !== undefined) {
-      const wallEcho = Date.now() - (now() - echo);
-      errorMs = Math.round(targetMs + 5000 - (wallEcho + offsetMs));
+      const writtenAt = echo - ECHO_LAG;
+      errorMs = Math.round(p.show - (writtenAt + shift()));
+      // Verzoegerung dieser Uhr (Quarz, USB) fuer das naechste Stellen uebernehmen
+      if (tickAt !== null && Math.abs(writtenAt - tickAt - SET_LAG) < 100) this._writeLag = writtenAt - tickAt;
     }
-    this._emit('timeset', { sent, errorMs });
-    return { sent, errorMs };
+    return { sent: p.fields, errorMs, aligned: tickAt !== null };
   }
 
   // Ersteinrichtung: Zeit setzen (die Uhr beschreibt dann ihr EEPROM) und danach neu verbinden.
   async initialSetup() {
     const initDone = this.waitSeen(['eeprom'], now(), 60000, 'Bestätigung');
     initDone.catch(() => {});
-    let r = await this.setTime({ timechange: 1 });
+    // kein Wiederholen hier: nach dem Stellen startet die Uhr neu
+    let r = await this.setTime({ timechange: 1, retry: false });
     await initDone;
     await this._handshake();
-    // Im LED-Test liest die Uhr unregelmaessig (1 oder 2 s): bei groesserer Abweichung jetzt genau stellen
-    if (this.state === 'ready' && (r.errorMs === null || Math.abs(r.errorMs) > 600)) r = await this.setTime({ timechange: 1 });
+    // Im LED-Test liest die Uhr unregelmaessig (1 oder 2 s): ging die Feinabstimmung daneben, jetzt genau stellen
+    if (this.state === 'ready' && (r.errorMs === null || Math.abs(r.errorMs) > 100)) r = await this.setTime({ timechange: 1 });
     return r;
   }
 }
