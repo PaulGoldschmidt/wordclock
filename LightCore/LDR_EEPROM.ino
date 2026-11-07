@@ -198,15 +198,15 @@ void EEPROM_Initialsetup() {
   EEPROM.update(EE_PC_WRITES, 0); // Anzahl der neubeschreibungen von einem PC auf 0.
   EEPROM.update(EE_RESETS, 0); // Anzahl der resets auf 0.
   EEPROM.update(EE_INIT_DONE, 1); // init auf 1 (zuletzt, damit eine unterbrochene Einrichtung wiederholt wird)
-  red = 0;
-  FastLED.clear();
-  delay(500);
-  WordClock_color();
-  delay(500);
-  FastLED.clear();
-  delay(500);
-  WordClock_color();
-  delay(500);
+  InitalsetupDone = 1; // auch im RAM: ein zweites '@' im selben LED-Test richtet die Uhr sonst erneut ein
+  red = 0; // Bestaetigung: Logo zweimal gruen blinken
+  for (byte k = 0; k < 2; k++) {
+    FastLED.clear();
+    FastLED.show(); // ohne show() blieb das Logo an, statt zu blinken
+    delay(500);
+    WordClock_color();
+    delay(500);
+  }
 }
 
 void Statistics() { // zaehlt die Laufzeit in 12-Stunden-Schritten im EEPROM (Zelle 8+9)
