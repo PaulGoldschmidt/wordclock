@@ -12,28 +12,13 @@ void SerialCommunication() {
     blue = 0;
     WordClock_color();
     if (mode_read.charAt(1) == '%') {
-      EEPROM.update(EE_COLOR_MODE, 1); //RGB Cycle anschalten
-      EEPROM.update(EE_RED, 255); //Rot auf voll an
-      EEPROM.update(EE_GREEN, 0); // G aus
-      EEPROM.update(EE_BLUE, 0); // B aus
-      enableColorCycle = 1;
-      R = 255;
-      B = 0;
-      G = 0;
+      setColorMode(1); // langsamer Farbwechsel
     }
     if (mode_read.charAt(1) == '=') {
-      EEPROM.update(EE_COLOR_MODE, 2); //RGB Cycle anschalten
-      EEPROM.update(EE_RED, 255); //Rot auf voll an
-      EEPROM.update(EE_GREEN, 0); // G aus
-      EEPROM.update(EE_BLUE, 0); // B aus
-      enableColorCycle = 2;
+      setColorMode(2); // bunt
     }
     if (mode_read.charAt(1) == '!') {
-      EEPROM.update(EE_COLOR_MODE, 3); //RGB Cycle anschalten
-      EEPROM.update(EE_RED, 255); //Rot auf voll an
-      EEPROM.update(EE_GREEN, 0); // G aus
-      EEPROM.update(EE_BLUE, 0); // B aus
-      enableColorCycle = 3;
+      setColorMode(3); // Regenbogen
     }
     if (mode_read.charAt(1) == '/') {
       if (analyzeAndSetRGB()) { // nur bei gueltiger Farbe umschalten
@@ -179,6 +164,16 @@ void analyzeAndSetBrightness() {
   EEPROM.update(EE_MIN_NIGHT, brightness_minNT);
   EEPROM.update(EE_NIGHT_BEGIN, NTbeginH);
   EEPROM.update(EE_NIGHT_END, NTendH);
+}
+
+// Farbwechsel-Modi 1-3: nur der Modus wird gespeichert. Die feste Farbe in EE_RED/GREEN/BLUE bleibt
+// erhalten (vorher wurde sie mit Rot ueberschrieben und war nach dem Zurueckschalten auf Modus 0 weg).
+void setColorMode(byte mode) {
+  enableColorCycle = mode;
+  EEPROM.update(EE_COLOR_MODE, mode);
+  if (mode == 1) {
+    startColorCycle();
+  }
 }
 
 bool analyzeAndSetRGB() { // '#/RRRGGGBBB', liefert false bei ungueltiger Farbe

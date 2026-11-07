@@ -91,6 +91,9 @@ void loadSettings() { // Einstellungen aus dem EEPROM in den RAM uebernehmen
   B = EEPROM.read(EE_BLUE);
   enableTimechange = EEPROM.read(EE_TIMECHANGE);
   enableColorCycle = EEPROM.read(EE_COLOR_MODE);
+  if (enableColorCycle == 1) {
+    startColorCycle(); // R/G/B im EEPROM sind die feste Farbe, der Farbwechsel startet bei Rot
+  }
   brightness_maxNT = EEPROM.read(EE_MAX_NIGHT);
   brightness_minNT = EEPROM.read(EE_MIN_NIGHT);
   NTbeginH = EEPROM.read(EE_NIGHT_BEGIN);

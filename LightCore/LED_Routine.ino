@@ -1,3 +1,11 @@
+// Modus 1 laeuft von Rot aus einmal um den Farbkreis (R + G + B bleibt 255) und funktioniert nur
+// von einem Punkt auf diesem Kreis aus, deshalb startet er immer hier.
+void startColorCycle() {
+  R = 255;
+  G = 0;
+  B = 0;
+}
+
 void ColorCycle() {
   if (R > 0 && B == 0) {
     R -= 1;
