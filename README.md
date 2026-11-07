@@ -1,5 +1,8 @@
 # WordClock -- a really old project of mine, now on GitHub
 
+> [!NOTE]  
+> I'm still activly documenting this project (especially the docs and hardware setup). I will remove this notice once I feel the repo contains all needed files to replicate the project.
+
 This is the repo for my version of the WordClock, which I've build a couple of and gifted to close friends over the years. The [main patent](https://patents.google.com/patent/DE202009017703U1/en) for the wordclock has expired already, so I'm planning to add more and more of my work I did in this field between 2014 and 2020. You can see how old this repo is because the default branch in this repo is still `master` and not `main`.
 
 This is by far my favorite project I've done so far, just because this has been going on for such a long time and started many years before AI was a thing, back when I was ~14 years old.
