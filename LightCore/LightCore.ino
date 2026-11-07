@@ -1,13 +1,13 @@
  /*
  * --------------------------------------------------------
  *       
- *             LICHTBILD Version 6 [NG]
+ *             WORDCLOCK Version 6
  *                -Stable Release-
  *                
  * --------------------------------------------------------
  * 
  * 
- * Code für das Lichtbild in der Version 6, basierend auf einem Arduino Pro Mini oder Arduino Nano.
+ * Code für die Wordclock in der Version 6, basierend auf einem Arduino Pro Mini oder Arduino Nano.
  * Kommunitaktion über die Serielle Schnittstelle mit einem Java-Programm. 
  * Zeitsicherung auf einem DS3231-RTC-Modul.
  * LED-Typ WS2812B, 125 LEDs im 11x11 Matrix-Design + vier Rand-LEDs.
@@ -67,7 +67,7 @@ CRGB leds[NUM_LEDS];
 void setup() {
   Serial.begin(115200);
   delay(250);
-  Serial.println(F("--Lichtbild Startvorgang--"));
+  Serial.println(F("--Wordclock Startvorgang--"));
   clock.begin(); // einmalig: startet I2C (Wire.begin) und initialisiert das RTC
   Wire.setWireTimeout(25000, true); // I2C-Timeout 25 ms: ein haengender Bus friert die Uhr nicht mehr ein
   FastLED.addLeds<WS2812B, 3, GRB>(leds, NUM_LEDS);

@@ -26,10 +26,10 @@ const WARTE = 'Warte auf neue Befehle';
 const STATUS_END = 'STATUS END';
 const encoder = new TextEncoder();
 
-// Startmeldungen, deren Zeitpunkt in _seen festgehalten wird
+// Startmeldungen, deren Zeitpunkt in _seen festgehalten wird (6.1 nennt sich noch Lichtbild / LightPicture)
 const MARKERS = [
-  ['banner', /^--Lichtbild Startvorgang--/], ['springe', /^Springe Startup-Animation/], ['hi', /^HI$/],
-  ['hello', /^Hello World - this is LightPicture/], ['eeprom', /^EEPROM ausgelesen/],
+  ['banner', /^--(Wordclock|Lichtbild) Startvorgang--/], ['springe', /^Springe Startup-Animation/], ['hi', /^HI$/],
+  ['hello', /^Hello World - this is (Wordclock|LightPicture)/], ['eeprom', /^EEPROM ausgelesen/],
 ];
 
 // Werte aus der Startausgabe, die 6.1 im Status nicht oder falsch meldet

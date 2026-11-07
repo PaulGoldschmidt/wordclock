@@ -155,7 +155,7 @@ void EEPROM_Read() {
   }
   else {
     while (InitalsetupDone != 1) { //debug am Anfang zum Checken ob alle LEDs funktionieren
-      Serial.println(F("Hello World - this is LightPicture NG. Testing LEDs..."));
+      Serial.println(F("Hello World - this is Wordclock. Testing LEDs..."));
       const CRGB testColors[] = {CRGB::Red, CRGB::Green, CRGB::Blue, CRGB::White};
       for (byte c = 0; c < 4; c++) {
         FastLED.setBrightness(20); // bei jeder Farbe neu: ein serieller Befehl setzt die Helligkeit auf 255
