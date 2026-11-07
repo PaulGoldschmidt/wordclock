@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lichtbild: Wortuhr einstellen</title>
+  <meta name="description" content="Die Wortuhr Lichtbild NG direkt im Browser einstellen: Uhrzeit, Farbe, Helligkeit. Per USB, ohne Installation.">
+  <meta name="theme-color" content="#141112">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+  <link rel="modulepreload" href="js/lightcore.js">
+  <link rel="modulepreload" href="js/wordclock.js">
+  <link rel="modulepreload" href="js/plate.js">
+  <link rel="modulepreload" href="js/plate-data.js">
+  <script type="module" src="js/app.js"></script>
+</head>
+<body>
+  <header class="top">
+    <a class="brand" href="./" aria-label="Lichtbild">
+      <span class="brand-word" aria-hidden="true">LICHTBILD</span>
+      <span class="brand-ng">NG</span>
+    </a>
+    <div class="conn">
+      <span class="conn-dot" aria-hidden="true"></span>
+      <span class="conn-status" id="connStatus">Nicht verbunden</span>
+      <button id="connectBtn" class="btn btn-primary">Verbinden</button>
+    </div>
+  </header>
+
+  <div id="banner" class="banner" role="status" hidden></div>
+
+  <main class="layout">
+    <section class="stage" aria-label="Vorschau">
+      <div class="wall" id="wall">
+        <svg id="plate" class="plate" role="img" aria-label="Vorschau der Wortuhr"></svg>
+      </div>
+      <p class="caption" id="caption" aria-live="polite">Vorschau</p>
+      <div class="scrub">
+        <input type="range" id="scrub" min="0" max="1439" step="1" aria-label="Uhrzeit für die Vorschau">
+        <div class="scrub-row">
+          <span class="scrub-time" id="scrubLabel">--:--</span>
+          <button id="liveBtn" class="chip" aria-pressed="true">Jetzt</button>
+          <div class="seg" role="group" aria-label="Raumlicht in der Vorschau">
+            <button data-room="hell" aria-pressed="true" title="heller Raum: Uhr leuchtet mit der Maximal-Helligkeit">Raum hell</button>
+            <button data-room="dunkel" aria-pressed="false" title="dunkler Raum: Uhr leuchtet mit der Minimal-Helligkeit">Raum dunkel</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <article class="card card-setup" id="cardSetup" hidden>
+        <h2><span class="num">00</span>Neue Uhr</h2>
+        <p>Diese Uhr ist noch nicht eingerichtet. Sie testet gerade ihre LEDs und wartet auf die Uhrzeit.
+          Beim Einrichten bekommt sie die Uhrzeit dieses Computers und die Werkseinstellungen.</p>
+        <div class="actions"><button id="setupBtn" class="btn btn-primary">Uhr einrichten</button></div>
+      </article>
+
+      <article class="card" id="cardTime" data-words="10/8 10/9 10/10">
+        <h2><span class="num">01</span>Uhrzeit</h2>
+        <div class="times">
+          <div><div class="lbl">Uhr</div><div class="big" id="clockTime">--:--:--</div></div>
+          <div><div class="lbl">Jetzt</div><div class="big" id="wallTime">--:--:--</div></div>
+        </div>
+        <p class="note" id="timeNote">Verbinde die Uhr, um ihre Uhrzeit zu sehen.</p>
+        <div class="actions">
+          <button id="syncTime" class="btn btn-primary needs-conn">Uhrzeit übernehmen</button>
+        </div>
+        <details class="more">
+          <summary>Manuell stellen</summary>
+          <div class="row">
+            <input type="datetime-local" id="manualTime" step="1" aria-label="Datum und Uhrzeit">
+            <button id="setManual" class="btn needs-conn">Stellen</button>
+          </div>
+        </details>
+        <label class="switch">
+          <input type="checkbox" id="dst" checked>
+          <span class="track" aria-hidden="true"></span>
+          <span>Automatisch auf Sommerzeit umstellen</span>
+        </label>
+      </article>
+
+      <article class="card" id="cardColor">
+        <h2><span class="num">02</span>Farbe</h2>
+        <div class="modes" role="radiogroup" aria-label="Farbmodus">
+          <button class="mode" data-mode="0" role="radio"><svg class="mini" aria-hidden="true"></svg><span>Eine Farbe</span></button>
+          <button class="mode" data-mode="1" role="radio"><svg class="mini mini-cycle" aria-hidden="true"></svg><span>Farbverlauf</span></button>
+          <button class="mode" data-mode="2" role="radio"><svg class="mini" aria-hidden="true"></svg><span>Bunt</span></button>
+          <button class="mode" data-mode="3" role="radio"><svg class="mini" aria-hidden="true"></svg><span>Regenbogen</span></button>
+        </div>
+        <p class="note" id="modeNote"></p>
+        <div class="colors" id="colors">
+          <div class="swatches" id="swatches" role="radiogroup" aria-label="Farbe"></div>
+          <label class="picker" title="Eigene Farbe">
+            <input type="color" id="colorPick" aria-label="Eigene Farbe">
+            <span id="rgbLabel">0 / 204 / 255</span>
+          </label>
+        </div>
+        <div class="actions"><button id="applyColor" class="btn btn-primary needs-conn">Übernehmen</button></div>
+      </article>
+
+      <article class="card" id="cardBright">
+        <h2><span class="num">03</span>Helligkeit</h2>
+        <p class="note">Ein Lichtsensor regelt die Helligkeit zwischen Minimum und Maximum, nachts mit eigenen Grenzen.</p>
+        <div class="bgrid">
+          <fieldset class="bcol" data-words="3/0 3/1 3/2">
+            <legend>Tag</legend>
+            <label class="range"><span>Min</span><input type="range" id="dayMin" min="0" max="255"><output for="dayMin"></output></label>
+            <label class="range"><span>Max</span><input type="range" id="dayMax" min="0" max="255"><output for="dayMax"></output></label>
+          </fieldset>
+          <fieldset class="bcol" data-words="5/6 5/7 5/8 5/9 5/10">
+            <legend>Nacht</legend>
+            <label class="range"><span>Min</span><input type="range" id="nightMin" min="0" max="255"><output for="nightMin"></output></label>
+            <label class="range"><span>Max</span><input type="range" id="nightMax" min="0" max="255"><output for="nightMax"></output></label>
+          </fieldset>
+        </div>
+        <div class="window">
+          <span>Nacht von</span>
+          <select id="nightBegin" aria-label="Nacht beginnt um"></select>
+          <span>bis</span>
+          <select id="nightEnd" aria-label="Nacht endet um"></select>
+          <span>Uhr</span>
+        </div>
+        <div class="hours" id="hours" aria-hidden="true"></div>
+        <p class="note warn" id="brightNote" hidden></p>
+        <div class="actions"><button id="applyBright" class="btn btn-primary needs-conn">Übernehmen</button></div>
+      </article>
+
+      <article class="card" id="cardLdr">
+        <h2><span class="num">04</span>Lichtsensor</h2>
+        <label class="range range-wide"><span>Teiler</span><input type="range" id="ldr" min="1" max="9" step="1"><output for="ldr"></output></label>
+        <div class="scale" aria-hidden="true"><span>heller</span><span>dunkler</span></div>
+        <p class="note">Die Uhr teilt den Messwert des Sensors durch diese Zahl. Ein größerer Teiler macht sie im selben Raum dunkler.</p>
+        <p class="live" id="ldrLive" hidden></p>
+        <div class="actions"><button id="applyLdr" class="btn btn-primary needs-conn">Übernehmen</button></div>
+      </article>
+
+      <article class="card" id="cardInfo">
+        <h2><span class="num">05</span>Uhr</h2>
+        <dl class="info">
+          <div><dt>Nummer</dt><dd id="infoNr">–</dd></div>
+          <div><dt>Firmware</dt><dd id="infoFw">–</dd></div>
+          <div><dt>Starts</dt><dd id="infoStarts">–</dd></div>
+          <div><dt>Laufzeit</dt><dd id="infoRuntime">–</dd></div>
+        </dl>
+        <div class="actions">
+          <button id="selftestBtn" class="btn needs-conn">Selbsttest</button>
+          <button id="factoryBtn" class="btn btn-danger needs-conn">Werkseinstellungen</button>
+        </div>
+        <div class="confirm" id="confirmReset" hidden>
+          <p>Farbe, Helligkeit, Sommerzeit und Lichtsensor auf Werkseinstellungen zurücksetzen?</p>
+          <div class="actions">
+            <button id="confirmYes" class="btn btn-danger">Zurücksetzen</button>
+            <button id="confirmNo" class="btn">Abbrechen</button>
+          </div>
+        </div>
+        <div class="result" id="selftestResult" hidden></div>
+        <details class="more console">
+          <summary>Konsole</summary>
+          <pre id="log" aria-live="off"></pre>
+          <form id="rawForm" class="row">
+            <input id="raw" placeholder="Befehl, z. B. / oder &amp;" maxlength="20" autocomplete="off" spellcheck="false" aria-label="Befehl">
+            <button class="btn needs-conn">Senden</button>
+          </form>
+        </details>
+      </article>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <p>Lichtbild NG: Einstellungen über Web Serial, direkt im Browser. Geht in Chrome, Edge und Firefox (ab Version 151) am Computer.</p>
+    <p><a href="https://github.com/PaulGoldschmidt/LichtbildNG">Quelltext auf GitHub</a></p>
+  </footer>
+</body>
+</html>
