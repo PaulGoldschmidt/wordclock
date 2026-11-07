@@ -103,8 +103,8 @@ void LED_Routine() {
         cStunde = stunde + 1;
       }
     }
-    if (enableColorCycle == 1) {
-      ColorCycle(); //wenn der automatische Farbübergang gewählt ist, dann in die Funktion springen
+    if (enableColorCycle == 1 && minute != lastminute) {
+      ColorCycle(); // ein Schritt pro Minute: Neuzeichnen nach einem Befehl schiebt den Farbwechsel nicht weiter
     }
     if (enableColorCycle == 2) {
       R = 255;

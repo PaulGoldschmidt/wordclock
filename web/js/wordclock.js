@@ -59,7 +59,8 @@ export class WordClockModel {
     if (minute >= 25) {
       cStunde = (stunde === 0 || stunde === 12 || stunde === 24) ? 1 : stunde + 1;
     }
-    if (this.mode === 1) this._colorCycle();
+    if (this.mode === 1 && minute !== this._lastMinute) this._colorCycle();
+    this._lastMinute = minute;
     if (this.mode === 2) { this.R = 255; this.G = 0; this.B = 0; }
 
     this._esist();
@@ -103,7 +104,7 @@ export class WordClockModel {
     });
   }
 
-  _colorCycle() { // ColorCycle(): Modus 1, ein Schritt pro Neuzeichnen
+  _colorCycle() { // ColorCycle(): Modus 1, ein Schritt pro Minute
     if (this.R > 0 && this.B === 0) { this.R -= 1; this.G += 1; }
     if (this.G > 0 && this.R === 0) { this.G -= 1; this.B += 1; }
     if (this.B > 0 && this.G === 0) { this.R += 1; this.B -= 1; }
