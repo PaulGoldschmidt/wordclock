@@ -2,7 +2,7 @@
 // Funktioniert mit der Original-Firmware (6.1) und mit 6.2. Kein DOM-Zugriff, damit das Modul auch
 // ausserhalb des Browsers (Tests) laeuft.
 //
-// Das Protokoll der Firmware (LightCore/communication_selfcheck.ino):
+// Das Protokoll der Firmware (WordCore/communication_selfcheck.ino):
 //  - Beim Oeffnen des Ports startet der Arduino neu. Kommt waehrend setup() ein Byte an, ueberspringt
 //    die Uhr die Startanimation, begrenzt die Helligkeit und schreibt Debug-Ausgaben ("PC-Modus").
 //  - Ein Befehl wird erst gelesen, wenn mindestens 13 Zeichen im Puffer liegen; danach liest die Uhr
@@ -96,7 +96,7 @@ export const commands = {
 };
 
 // ---- Verbindung --------------------------------------------------------------------------------------
-export class LightCore extends EventTarget {
+export class WordCore extends EventTarget {
   constructor(port) {
     super();
     this.port = port;

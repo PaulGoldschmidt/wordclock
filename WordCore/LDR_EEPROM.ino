@@ -181,7 +181,7 @@ void EEPROM_Read() {
   }
 }
 void EEPROM_Initialsetup() {
-  Serial.println(F("Hello, World! LightCore initalisiert jetzt den EEPROM."));
+  Serial.println(F("Hello, World! WordCore initalisiert jetzt den EEPROM."));
   red = 255;
   green = 255;
   blue = 0;

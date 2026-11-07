@@ -1,4 +1,4 @@
-import { LightCore, berlinFields, berlinToMs, cetFields, commands, fieldsToMs, now, two } from './lightcore.js';
+import { WordCore, berlinFields, berlinToMs, cetFields, commands, fieldsToMs, now, two } from './wordcore.js';
 import { FACTORY, WordClockModel, fillFrame, isNight, logoFrame, phrase } from './wordclock.js';
 import { Plate, miniPlate, rgb } from './plate.js';
 
@@ -39,7 +39,7 @@ const hm = (h, mi) => `${two(h)}:${two(mi)}`;
 const hms = (f) => `${hm(f.h, f.mi)}:${two(f.s)}`;
 
 const ui = {
-  lc: null,
+  core: null,
   state: 'closed',
   draft: clone(FACTORY), // was in der Oberflaeche eingestellt ist
   known: null, // was die Uhr gespeichert hat; einzelne Werte null = nicht auslesbar
@@ -49,9 +49,9 @@ const ui = {
   timeMsg: null, // { text, cls, until }
 };
 
-const usable = () => Boolean(ui.lc) && (ui.state === 'ready' || ui.state === 'limited');
-const busy = () => Boolean(ui.lc?.busy);
-const nightAt = (h) => isNight(h, ui.draft.nightBegin, ui.draft.nightEnd, ui.lc?.legacy);
+const usable = () => Boolean(ui.core) && (ui.state === 'ready' || ui.state === 'limited');
+const busy = () => Boolean(ui.core?.busy);
+const nightAt = (h) => isNight(h, ui.draft.nightBegin, ui.draft.nightEnd, ui.core?.legacy);
 // Uhrzeit, die die Uhr zeigen sollte: mit Sommerzeit deutsche Ortszeit, sonst immer MEZ
 const wallFields = () => (ui.draft.timechange ? berlinFields : cetFields)(Date.now());
 const clockDst = () => ui.known?.timechange ?? ui.draft.timechange;
@@ -71,7 +71,7 @@ function modelChanged() {
 
 function displayTime() {
   if (ui.scrubMin !== null) return { h: Math.floor(ui.scrubMin / 60), mi: ui.scrubMin % 60, source: 'scrub' };
-  const c = ui.lc?.clock;
+  const c = ui.core?.clock;
   return c ? { ...c, source: 'clock' } : { ...wallFields(), source: 'computer' };
 }
 
@@ -94,7 +94,7 @@ function overlayFrame(t) {
       case 'connecting':
         return { leds: logoFrame(), level: 0.55 + 0.45 * Math.sin(dt / 260), smooth: true, caption: 'Verbinde mit der Uhr …' };
       case 'reading':
-        return { leds: logoFrame([0, 0, 255]), level: 1, caption: `Die Uhr empfängt: <b>${ui.lc?.busyLabel || 'Befehl'}</b>` };
+        return { leds: logoFrame([0, 0, 255]), level: 1, caption: `Die Uhr empfängt: <b>${ui.core?.busyLabel || 'Befehl'}</b>` };
       case 'selftest': {
         const caption = 'Selbsttest läuft: alle LEDs weiß, dann zählt die Uhr einmal durch';
         if (dt < 2600 || dt >= 30100) return { leds: logoFrame([0, 0, 255]), level: 1, caption };
@@ -113,7 +113,7 @@ function overlayFrame(t) {
       ? { leds: fillFrame([[255, 0, 0], [0, 128, 0], [0, 0, 255], [255, 255, 255]][step]), level: visual(20), caption }
       : { leds: logoFrame(), level: 1, caption };
   }
-  if (ui.state === 'ready' && ui.lc?.rtcError && !busy()) {
+  if (ui.state === 'ready' && ui.core?.rtcError && !busy()) {
     return { leds: logoFrame([0, 255, 0]), level: Math.floor(t / 1000) % 2 ? 0 : 1, caption: 'Die Uhr kennt die Uhrzeit nicht: sie blinkt grün' };
   }
   return null;
@@ -157,7 +157,7 @@ function render() {
 }
 
 function renderLdr() {
-  const tel = ui.state === 'ready' ? ui.lc?.telemetry : null;
+  const tel = ui.state === 'ready' ? ui.core?.telemetry : null;
   const box = $('ldrLive');
   box.hidden = !tel || tel.ldr === undefined;
   if (!box.hidden) {
@@ -190,13 +190,13 @@ function showScrub(min) {
 function renderTimes() {
   const wall = wallFields();
   $('wallTime').textContent = hms(wall);
-  const c = ui.lc?.clock;
+  const c = ui.core?.clock;
   $('clockTime').textContent = c ? hms(c) : '--:--:--';
   let msg = { text: 'Verbinde die Uhr, um ihre Uhrzeit zu sehen.', cls: '' };
   if (ui.timeMsg && now() < ui.timeMsg.until) msg = ui.timeMsg;
   else if (ui.state === 'setup') msg = { text: 'Wird beim Einrichten gestellt.', cls: '' };
   else if (ui.state === 'limited') msg = { text: 'Die Uhr meldet im eingeschränkten Modus keine Uhrzeit. Stellen geht trotzdem.', cls: '' };
-  else if (ui.lc?.rtcError) msg = { text: 'Die Uhr kennt die Uhrzeit nicht (Knopfzelle leer?). Bitte Uhrzeit übernehmen.', cls: 'warn' };
+  else if (ui.core?.rtcError) msg = { text: 'Die Uhr kennt die Uhrzeit nicht (Knopfzelle leer?). Bitte Uhrzeit übernehmen.', cls: 'warn' };
   else if (c) {
     let diff = (fieldsToMs(c) - fieldsToMs(wall)) / 1000;
     if (Math.abs(diff) < 2) msg = { text: 'Die Uhr geht genau.', cls: 'good' };
@@ -287,7 +287,7 @@ function updateDirty() {
 function updateBrightNote() {
   const d = ui.draft;
   const notes = [];
-  if (ui.lc?.legacy && d.nightBegin <= d.nightEnd) {
+  if (ui.core?.legacy && d.nightBegin <= d.nightEnd) {
     notes.push('Mit der Original-Firmware 6.1 klappt nur ein Nachtzeitraum über Mitternacht (Beginn später als Ende).');
   }
   if (ui.known?.nightMax === null) {
@@ -417,7 +417,7 @@ function renderConn() {
   const body = document.body.classList;
   body.toggle('is-connected', s === 'ready' || s === 'limited' || s === 'setup');
   body.toggle('is-connecting', s === 'connecting');
-  const nr = ui.lc?.status?.number;
+  const nr = ui.core?.status?.number;
   $('connStatus').textContent = {
     closed: 'Nicht verbunden',
     connecting: 'Verbinde …',
@@ -443,7 +443,7 @@ function loadFromClock(s) {
   for (const k of SETTINGS) ui.known[k] = s[k] ?? null; // unbekannt: "Uebernehmen" bleibt markiert
   ui.draft = d;
   $('infoNr').textContent = s.number ?? '–';
-  $('infoFw').textContent = ui.lc.legacy ? '6.1 (Original)' : ui.lc.firmware;
+  $('infoFw').textContent = ui.core.legacy ? '6.1 (Original)' : ui.core.firmware;
   $('infoStarts').textContent = s.startups;
   const hours = s.runtime * 12;
   $('infoRuntime').textContent = hours >= 48 ? `${Math.round(hours / 24).toLocaleString('de-DE')} Tage` : `${hours} h`;
@@ -460,25 +460,25 @@ function markSent(keys) {
 
 async function connect(port) {
   hideBanner();
-  const lc = new LightCore(port);
-  ui.lc = lc;
-  lc.addEventListener('state', (e) => {
-    if (e.detail === 'closed' && ui.lc === lc) ui.lc = null;
+  const core = new WordCore(port);
+  ui.core = core;
+  core.addEventListener('state', (e) => {
+    if (e.detail === 'closed' && ui.core === core) ui.core = null;
     setState(e.detail);
   });
-  lc.addEventListener('status', (e) => loadFromClock(e.detail));
-  lc.addEventListener('busy', () => {
-    if (!lc.busy && (ui.overlay?.kind === 'reading' || ui.overlay?.kind === 'selftest')) ui.overlay = null;
+  core.addEventListener('status', (e) => loadFromClock(e.detail));
+  core.addEventListener('busy', () => {
+    if (!core.busy && (ui.overlay?.kind === 'reading' || ui.overlay?.kind === 'selftest')) ui.overlay = null;
     updateButtons();
   });
-  lc.addEventListener('reading', (e) => {
+  core.addEventListener('reading', (e) => {
     ui.overlay = { kind: e.detail.cmd === commands.selftest() ? 'selftest' : 'reading', start: e.detail.at };
   });
-  lc.addEventListener('log', (e) => logLine(e.detail));
-  lc.addEventListener('lost', () => {
+  core.addEventListener('log', (e) => logLine(e.detail));
+  core.addEventListener('lost', () => {
     banner('Die Verbindung zur Uhr wurde unterbrochen. Ist das USB-Kabel noch eingesteckt?', 'error');
   });
-  lc.addEventListener('timeset', (e) => {
+  core.addEventListener('timeset', (e) => {
     const err = e.detail.errorMs === null ? null : Math.abs(e.detail.errorMs);
     let text = 'Uhrzeit gesendet.';
     if (err !== null) text = `Gestellt, Abweichung ${err < 1000 ? `${err} ms` : `${(err / 1000).toLocaleString('de-DE', { maximumFractionDigits: 1 })} s`}.`;
@@ -489,15 +489,15 @@ async function connect(port) {
     };
   });
   try {
-    await lc.open();
-    if (lc.state === 'ready') {
+    await core.open();
+    if (core.state === 'ready') {
       const id = banner('Verbunden. Solange die Uhr am Computer hängt, leuchtet sie gedimmt. Beim Trennen startet sie neu und läuft normal weiter.');
       setTimeout(() => hideBanner(id), 9000);
-    } else if (lc.state === 'limited') {
+    } else if (core.state === 'limited') {
       banner('Verbunden, aber die Uhr hat beim Start den Computer nicht erkannt. Einstellen geht, nur ihre Uhrzeit wird nicht angezeigt.');
     }
   } catch (e) {
-    ui.lc = null;
+    ui.core = null;
     setState('closed');
     let msg = e.message;
     if (e.name === 'InvalidStateError' || e.name === 'NetworkError') {
@@ -508,10 +508,10 @@ async function connect(port) {
 }
 
 async function disconnect() {
-  const lc = ui.lc;
-  if (!lc) return;
-  ui.lc = null;
-  await lc.close().catch(() => {});
+  const core = ui.core;
+  if (!core) return;
+  ui.core = null;
+  await core.close().catch(() => {});
   setState('closed');
 }
 
@@ -545,49 +545,49 @@ async function run(fn) {
 }
 
 function bindActions() {
-  $('connectBtn').addEventListener('click', () => (ui.lc ? disconnect() : chooseAndConnect()));
+  $('connectBtn').addEventListener('click', () => (ui.core ? disconnect() : chooseAndConnect()));
   $('setupBtn').addEventListener('click', () => run(async () => {
     ui.overlay = { kind: 'init', start: now() };
     try {
-      await ui.lc.initialSetup();
+      await ui.core.initialSetup();
     } finally {
       ui.overlay = null;
     }
   }));
-  $('syncTime').addEventListener('click', () => run(() => ui.lc.setTime({ timechange: clockDst() })));
+  $('syncTime').addEventListener('click', () => run(() => ui.core.setTime({ timechange: clockDst() })));
   $('setManual').addEventListener('click', () => run(async () => {
     const v = $('manualTime').value;
     const m = v.match(/^(\d{4})-(\d\d)-(\d\d)T(\d\d):(\d\d)(?::(\d\d))?/);
     if (!m) throw new Error('Bitte Datum und Uhrzeit eingeben.');
     const target = berlinToMs(...m.slice(1).map((x) => Number(x || 0)));
-    await ui.lc.setTime({ offsetMs: target - Date.now(), timechange: clockDst() });
+    await ui.core.setTime({ offsetMs: target - Date.now(), timechange: clockDst() });
   }));
   $('dst').addEventListener('change', (e) => run(async () => {
     ui.draft.timechange = e.target.checked ? 1 : 0;
     if (usable()) {
-      await ui.lc.setTimechange(e.target.checked);
+      await ui.core.setTimechange(e.target.checked);
       markSent(['timechange']);
     }
   }));
   $('applyColor').addEventListener('click', () => run(async () => {
     const d = ui.draft;
-    if (d.mode === 0) await ui.lc.setColor(d.color);
-    else await ui.lc.setMode(d.mode);
+    if (d.mode === 0) await ui.core.setColor(d.color);
+    else await ui.core.setMode(d.mode);
     markSent(['mode', 'color']);
   }));
   $('applyBright').addEventListener('click', () => run(async () => {
-    await ui.lc.setBrightness(ui.draft);
+    await ui.core.setBrightness(ui.draft);
     markSent(BRIGHT_KEYS);
   }));
   $('applyLdr').addEventListener('click', () => run(async () => {
-    await ui.lc.setLdr(ui.draft.ldr);
+    await ui.core.setLdr(ui.draft.ldr);
     markSent(['ldr']);
   }));
   $('selftestBtn').addEventListener('click', () => run(async () => {
     const box = $('selftestResult');
     box.hidden = false;
     box.innerHTML = '<span class="tag">Läuft, etwa 30 Sekunden …</span>';
-    const r = await ui.lc.selftest();
+    const r = await ui.core.selftest();
     const ldr = { LDROK: ['Lichtsensor OK', 'ok'], LDRTH: ['Lichtsensor: sehr hell / Kurzschluss?', 'bad'], LDRTL: ['Lichtsensor: sehr dunkel / nicht angeschlossen?', 'bad'], PROBLEM: ['Lichtsensor: Problem', 'bad'] }[r.ldr] ?? ['Lichtsensor: keine Antwort', 'bad'];
     const rtc = r.rtc === 'RTCOK' ? ['Echtzeituhr OK', 'ok'] : ['Echtzeituhr nicht gestellt', 'bad'];
     box.innerHTML = [ldr, rtc].map(([t, c]) => `<span class="tag ${c}">${t}</span>`).join('');
@@ -596,16 +596,16 @@ function bindActions() {
   $('confirmNo').addEventListener('click', () => { $('confirmReset').hidden = true; });
   $('confirmYes').addEventListener('click', () => run(async () => {
     $('confirmReset').hidden = true;
-    await ui.lc.factoryReset();
+    await ui.core.factoryReset();
   }));
   $('rawForm').addEventListener('submit', (e) => {
     e.preventDefault();
     const v = $('raw').value.trim();
     if (!v) return;
     $('raw').value = '';
-    run(() => ui.lc.command(v, { label: 'Befehl' }));
+    run(() => ui.core.command(v, { label: 'Befehl' }));
   });
-  window.addEventListener('pagehide', () => { ui.lc?.close(); });
+  window.addEventListener('pagehide', () => { ui.core?.close(); });
 }
 
 // ---------- Konsole ----------

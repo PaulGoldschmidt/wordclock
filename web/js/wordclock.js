@@ -1,4 +1,4 @@
-// Nachbildung der Anzeige der Firmware (LightCore/LED_Routine.ino + LED_Layout.ino), LED fuer LED.
+// Nachbildung der Anzeige der Firmware (WordCore/LED_Routine.ino + LED_Layout.ino), LED fuer LED.
 // Die Farbmodi 1-3 haengen von der Reihenfolge ab, in der die LEDs gesetzt werden: deshalb ist das
 // hier bewusst eine woertliche Uebersetzung und keine "schoenere" Neuschreibung.
 
